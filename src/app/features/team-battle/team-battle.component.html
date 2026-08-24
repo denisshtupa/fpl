@@ -1,0 +1,289 @@
+<section class="team-battle">
+  <p-card styleClass="winner-card">
+    <div class="winner-content">
+      @if (isTie()) {
+        <div>
+          <p class="winner-label">Result</p>
+          <h2>It's a tie!</h2>
+          <p class="winner-detail">Both teams are level on {{ teams()[0]?.totalPoints }} points.</p>
+        </div>
+      } @else if (winner(); as leadingTeam) {
+        <div>
+          <p class="winner-label">Leading team</p>
+          <h2 [style.color]="leadingTeam.color">{{ leadingTeam.name }}</h2>
+          <p class="winner-detail">
+            {{ leadingTeam.totalPoints }} pts · +{{ margin() }} ahead
+          </p>
+        </div>
+        <div class="winner-trophy">
+          <i class="pi pi-trophy"></i>
+        </div>
+      }
+    </div>
+
+    @if (playersLeftByTeam().length) {
+      <div class="players-left-section">
+        <p class="players-left-title">Players still to play this GW</p>
+        <div class="players-left-teams">
+          @for (team of playersLeftByTeam(); track team.id) {
+            <div class="players-left-team-group">
+              <div class="players-left-team-header" [style.borderColor]="team.color">
+                <strong [style.color]="team.color">{{ team.name }}</strong>
+                <span class="players-left-team-total" [class.all-done]="team.totalLeft === 0">
+                  {{ team.totalLeft }} left
+                </span>
+              </div>
+              <div class="players-left-grid">
+                @for (item of team.members; track item.entryId) {
+                  <div class="players-left-item" [style.borderColor]="team.color">
+                    <div class="players-left-manager">
+                      <strong>{{ item.shortName }}</strong>
+                    </div>
+                    <div class="players-left-count" [class.all-done]="item.playersLeftToPlay === 0">
+                      <span class="players-left-number">{{ item.playersLeftToPlay }}</span>
+                      <span class="players-left-label">left</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </p-card>
+
+  <div class="team-scoreboard">
+    @for (team of teams(); track team.id) {
+      <p-card [styleClass]="'team-card team-card-' + team.id">
+        <div class="team-card-header" [style.borderColor]="team.color">
+          <h3 [style.color]="team.color">{{ team.name }}</h3>
+          <span class="team-total">{{ team.totalPoints }} pts</span>
+        </div>
+        <ul class="team-members">
+          @for (player of team.players; track player.entryId) {
+            <li>
+              <span>{{ player.shortName }}</span>
+              <strong>{{ player.totalPoints }}</strong>
+            </li>
+          }
+        </ul>
+      </p-card>
+    }
+  </div>
+
+  <div class="charts-grid">
+    <p-card styleClass="chart-card">
+      <ng-template #title>Team race</ng-template>
+      <ng-template #subtitle>Cumulative points by gameweek</ng-template>
+      <div class="chart-container">
+        <p-chart type="line" [data]="teamChartData()" [options]="chartOptions" />
+      </div>
+    </p-card>
+
+    <p-card styleClass="chart-card">
+      <ng-template #title>Manager race</ng-template>
+      <ng-template #subtitle>Each manager's cumulative points by gameweek</ng-template>
+      <div class="chart-container chart-container-tall">
+        <p-chart type="line" [data]="playerChartData()" [options]="chartOptions" />
+      </div>
+    </p-card>
+  </div>
+
+  <p-card styleClass="table-card">
+    <ng-template #title>Head-to-head breakdown</ng-template>
+
+    <div class="h2h-list">
+      @for (player of players(); track player.entryId) {
+        <div class="h2h-card" [style.borderColor]="player.teamColor">
+          <div class="h2h-main">
+            <div>
+              <strong>{{ player.shortName }}</strong>
+              <span class="h2h-entry">{{ player.entryName }}</span>
+            </div>
+            <div class="h2h-points">
+              <span class="h2h-total">{{ player.totalPoints }}</span>
+              <span class="h2h-gw">GW {{ player.gwPoints }}</span>
+            </div>
+          </div>
+          <p-tag
+            [value]="player.teamName"
+            [style]="{ background: player.teamColor, color: '#0f1117' }"
+            styleClass="h2h-team-tag"
+          />
+        </div>
+      }
+    </div>
+
+    <div class="h2h-team-totals">
+      @for (team of teams(); track team.id) {
+        <div class="h2h-team-total" [style.borderColor]="team.color">
+          <strong [style.color]="team.color">{{ team.name }}</strong>
+          <span>{{ team.gwPoints }} GW · <strong>{{ team.totalPoints }}</strong> tot</span>
+        </div>
+      }
+    </div>
+  </p-card>
+
+  <p-card styleClass="details-card">
+    <ng-template #title>Manager intel</ng-template>
+    <ng-template #subtitle>Squads, chips, team value and live player points for {{ currentEvent()?.name ?? 'current GW' }}</ng-template>
+
+    @if (detailsError()) {
+      <p-message severity="warn" [text]="detailsError()!" styleClass="details-message" />
+    }
+
+    @if (detailsLoading()) {
+      <div class="details-loading">
+        <p-progressSpinner strokeWidth="4" ariaLabel="Loading manager details" />
+        <p>Loading squads and chip data…</p>
+      </div>
+    } @else {
+      @for (teamGroup of profilesByTeam(); track teamGroup.id) {
+        <section class="manager-group">
+          <div class="manager-group-header" [style.borderColor]="teamGroup.color">
+            <h3 [style.color]="teamGroup.color">{{ teamGroup.name }}</h3>
+          </div>
+
+          <p-accordion [multiple]="true" styleClass="manager-accordion">
+            @for (profile of teamGroup.profiles; track profile.entryId) {
+              <p-accordion-panel [value]="profile.entryId.toString()">
+                <p-accordion-header>
+                  <div class="accordion-header">
+                    <div>
+                      <strong>{{ profile.shortName }}</strong>
+                      <span class="accordion-subtitle">{{ profile.entryName }}</span>
+                    </div>
+                    <div class="accordion-meta">
+                      <span class="gw-points-badge">{{ profile.gwPoints }} GW pts</span>
+                      <span>{{ formatValue(profile.teamValue) }}</span>
+                    </div>
+                  </div>
+                </p-accordion-header>
+
+                <p-accordion-content>
+                  <div class="profile-stats">
+                    <div class="stat-item">
+                      <span class="stat-label">Team value</span>
+                      <strong>{{ formatValue(profile.teamValue) }}</strong>
+                    </div>
+                    <div class="stat-item">
+                      <span class="stat-label">In the bank</span>
+                      <strong>{{ formatValue(profile.bank) }}</strong>
+                    </div>
+                    <div class="stat-item">
+                      <span class="stat-label">GW points</span>
+                      <strong>{{ profile.gwPoints }}</strong>
+                    </div>
+                    <div class="stat-item">
+                      <span class="stat-label">Bench points</span>
+                      <strong>{{ profile.benchPoints }}</strong>
+                    </div>
+                    <div class="stat-item">
+                      <span class="stat-label">Transfer hits</span>
+                      <strong>-{{ profile.transferCost }}</strong>
+                    </div>
+                    <div class="stat-item">
+                      <span class="stat-label">Transfers</span>
+                      <strong>{{ profile.transfers }}</strong>
+                    </div>
+                  </div>
+
+                  <div class="chip-row">
+                    <span class="chip-row-label">Active chip</span>
+                    @if (profile.activeChipLabel) {
+                      <p-tag [value]="profile.activeChipLabel" severity="warn" />
+                    } @else {
+                      <span class="chip-empty">None</span>
+                    }
+                  </div>
+
+                  <div class="chip-row">
+                    <span class="chip-row-label">Season chips</span>
+                    <div class="chip-tags">
+                      @for (chip of profile.chips; track chip.key) {
+                        <p-tag
+                          [value]="chip.used ? chip.label + ' (GW' + chip.event + ')' : chip.label"
+                          [severity]="chip.used ? 'secondary' : 'success'"
+                          [styleClass]="chip.used ? 'chip-used' : 'chip-available'"
+                        />
+                      }
+                    </div>
+                  </div>
+
+                  <div class="squad-sections">
+                    <div class="squad-section">
+                      <div class="squad-section-header">
+                        <h4>XI · {{ profile.startingXiPoints }} pts</h4>
+                      </div>
+                      <ul class="squad-list">
+                        @for (player of profile.squad; track player.elementId) {
+                          @if (!player.isBench) {
+                            <li [class]="'squad-card status-row-' + player.status">
+                              <div class="squad-card-main">
+                                <div class="squad-card-identity">
+                                  <span [class]="'role-badge role-' + player.role.toLowerCase()">{{ player.role }}</span>
+                                  <div class="player-name-cell">
+                                    <span [class]="'player-name status-' + player.status">{{ player.name }}</span>
+                                    @if (player.isCaptain) {
+                                      <p-tag value="C" severity="warn" styleClass="role-tag" />
+                                    } @else if (player.isViceCaptain) {
+                                      <p-tag value="VC" severity="secondary" styleClass="role-tag" />
+                                    }
+                                    <span class="squad-meta">{{ player.clubShort }}</span>
+                                  </div>
+                                </div>
+                                <div class="squad-card-score">
+                                  <span class="squad-mins">{{ player.minutes }}′</span>
+                                  <span [class]="'points-pill status-' + player.status">
+                                    {{ player.scoredPoints }}
+                                    @if (player.multiplier > 1) {
+                                      <span class="multiplier">x{{ player.multiplier }}</span>
+                                    }
+                                  </span>
+                                </div>
+                              </div>
+                            </li>
+                          }
+                        }
+                      </ul>
+                    </div>
+
+                    <div class="squad-section">
+                      <div class="squad-section-header">
+                        <h4>Bench · {{ profile.benchPoints }} pts</h4>
+                      </div>
+                      <ul class="squad-list">
+                        @for (player of profile.squad; track player.elementId) {
+                          @if (player.isBench) {
+                            <li [class]="'squad-card bench-row status-row-' + player.status">
+                              <div class="squad-card-main">
+                                <div class="squad-card-identity">
+                                  <span [class]="'role-badge role-' + player.role.toLowerCase()">{{ player.role }}</span>
+                                  <div class="player-name-cell">
+                                    <span [class]="'player-name status-' + player.status">{{ player.name }}</span>
+                                    <span class="squad-meta">{{ player.clubShort }}</span>
+                                  </div>
+                                </div>
+                                <div class="squad-card-score">
+                                  <span class="squad-mins">{{ player.minutes }}′</span>
+                                  <span [class]="'points-pill status-' + player.status">
+                                    {{ player.scoredPoints }}
+                                  </span>
+                                </div>
+                              </div>
+                            </li>
+                          }
+                        }
+                      </ul>
+                    </div>
+                  </div>
+                </p-accordion-content>
+              </p-accordion-panel>
+            }
+          </p-accordion>
+        </section>
+      }
+    }
+  </p-card>
+</section>

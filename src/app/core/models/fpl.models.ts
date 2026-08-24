@@ -1,0 +1,153 @@
+export interface FplElementType {
+  id: number;
+  singular_name_short: string;
+}
+
+export interface FplTeam {
+  id: number;
+  name: string;
+  short_name: string;
+}
+
+export interface FplElement {
+  id: number;
+  web_name: string;
+  team: number;
+  element_type: number;
+  event_points: number;
+  total_points: number;
+}
+
+export interface FplBootstrapStatic {
+  events: FplEvent[];
+  elements: FplElement[];
+  teams: FplTeam[];
+  element_types: FplElementType[];
+}
+
+export interface FplEntry {
+  id: number;
+  name: string;
+  player_first_name: string;
+  player_last_name: string;
+  last_deadline_value: number;
+  last_deadline_bank: number;
+  summary_event_points: number;
+  summary_overall_points: number;
+}
+
+export interface FplEntryHistoryChip {
+  name: string;
+  event: number;
+  time: string;
+}
+
+export interface FplEntryHistoryCurrent {
+  event: number;
+  points: number;
+  total_points: number;
+  value: number;
+  bank: number;
+  event_transfers: number;
+  event_transfers_cost: number;
+  points_on_bench: number;
+}
+
+export interface FplEntryHistoryResponse {
+  current: FplEntryHistoryCurrent[];
+  chips: FplEntryHistoryChip[];
+}
+
+export interface FplPick {
+  element: number;
+  position: number;
+  multiplier: number;
+  is_captain: boolean;
+  is_vice_captain: boolean;
+}
+
+export interface FplEntryPicksResponse {
+  active_chip: string | null;
+  entry_history: FplEntryHistoryCurrent;
+  picks: FplPick[];
+}
+
+export interface FplLiveElementStats {
+  total_points: number;
+  minutes: number;
+}
+
+export interface FplLiveElement {
+  id: number;
+  stats: FplLiveElementStats;
+}
+
+export interface FplEventLiveResponse {
+  elements: FplLiveElement[];
+}
+
+export interface FplFixture {
+  id: number;
+  event: number;
+  team_h: number;
+  team_a: number;
+  started: boolean;
+  finished: boolean;
+  finished_provisional: boolean;
+  minutes: number;
+  kickoff_time: string | null;
+}
+
+export type FixtureMatchStatus = 'upcoming' | 'live' | 'finished';
+
+export interface FplLeague {
+  id: number;
+  name: string;
+  created: string;
+  closed: boolean;
+  admin_entry: number;
+  scoring: string;
+  has_cup: boolean;
+}
+
+export interface FplStandingEntry {
+  rank: number;
+  last_rank: number;
+  rank_sort: number;
+  total: number;
+  entry: number;
+  entry_name: string;
+  player_name: string;
+  event_total: number;
+  club_badge_src: string | null;
+}
+
+export interface FplStandingsPage {
+  has_next: boolean;
+  page: number;
+  results: FplStandingEntry[];
+}
+
+export interface FplLeagueStandingsResponse {
+  league: FplLeague;
+  standings: FplStandingsPage;
+  last_updated_data: string;
+}
+
+export interface FplEvent {
+  id: number;
+  name: string;
+  deadline_time: string;
+  finished: boolean;
+  is_current: boolean;
+  is_next: boolean;
+}
+
+export const FPL_CHIP_LABELS: Record<string, string> = {
+  wildcard: 'Wildcard',
+  bboost: 'Bench Boost',
+  '3xc': 'Triple Captain',
+  freehit: 'Free Hit',
+};
+
+export const ALL_FPL_CHIPS = ['wildcard', 'bboost', '3xc', 'freehit'] as const;

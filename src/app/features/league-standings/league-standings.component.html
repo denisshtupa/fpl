@@ -1,0 +1,180 @@
+<div class="page">
+  <p-toolbar class="page-toolbar">
+    <ng-template #start>
+      <div class="brand">
+        <i class="pi pi-chart-bar brand-icon"></i>
+        <div>
+          <p class="brand-title">FPL League Dashboard</p>
+          <p class="brand-subtitle">Private classic league</p>
+        </div>
+      </div>
+    </ng-template>
+
+    <ng-template #end>
+      <div class="toolbar-actions">
+        <a [href]="leagueUrl" target="_blank" rel="noopener noreferrer">
+          <p-button
+            label="FPL"
+            icon="pi pi-external-link"
+            [outlined]="true"
+            severity="secondary"
+            size="small"
+            styleClass="toolbar-btn"
+          />
+        </a>
+        <p-button
+          label="Refresh"
+          icon="pi pi-refresh"
+          [loading]="loading()"
+          (onClick)="loadData()"
+          severity="contrast"
+          size="small"
+          styleClass="toolbar-btn"
+        />
+      </div>
+    </ng-template>
+  </p-toolbar>
+
+  @if (error()) {
+    <p-message severity="error" [text]="error()!" styleClass="page-message" />
+  }
+
+  @if (loading()) {
+    <div class="loading-state">
+      <p-progressSpinner strokeWidth="4" ariaLabel="Loading league data" />
+      <p>Loading league standings…</p>
+    </div>
+  } @else {
+    <p-tabs [(value)]="activeTab" styleClass="dashboard-tabs">
+      <p-tablist>
+        <p-tab value="overall">Overall standings</p-tab>
+        <p-tab value="teams">Team battle</p-tab>
+      </p-tablist>
+
+      <p-tabpanels>
+        <p-tabpanel value="overall">
+          <section class="tab-content">
+            <section class="summary-grid">
+              <p-card styleClass="summary-card">
+                <div class="summary-label">League</div>
+                <div class="summary-value">{{ leagueName() }}</div>
+              </p-card>
+
+              <p-card styleClass="summary-card">
+                <div class="summary-label">Gameweek</div>
+                <div class="summary-value">{{ currentEvent()?.name ?? '—' }}</div>
+              </p-card>
+
+              <p-card styleClass="summary-card">
+                <div class="summary-label">Managers</div>
+                <div class="summary-value">{{ standings().length }}</div>
+              </p-card>
+
+              <p-card styleClass="summary-card">
+                <div class="summary-label">Avg GW points</div>
+                <div class="summary-value">{{ averageGwPoints() }}</div>
+              </p-card>
+            </section>
+
+            @if (topScorer(); as leader) {
+              <p-card styleClass="leader-card">
+                <div class="leader-content">
+                  <div>
+                    <p class="leader-label">Current leader</p>
+                    <h2>{{ leader.entry_name }}</h2>
+                    <p class="leader-manager">{{ leader.player_name }}</p>
+                  </div>
+                  <div class="leader-points">
+                    <span class="leader-total">{{ leader.total }}</span>
+                    <span class="leader-caption">total pts</span>
+                  </div>
+                </div>
+              </p-card>
+            }
+
+            <p-card styleClass="table-card">
+              <ng-template #title>Standings</ng-template>
+              <ng-template #subtitle>
+                Last updated {{ lastUpdated() | date: 'medium' }}
+              </ng-template>
+
+              <p-table
+                [value]="standings()"
+                sortField="rank"
+                [sortOrder]="1"
+                styleClass="standings-table p-datatable-sm"
+                [scrollable]="true"
+              >
+                <ng-template #header>
+                  <tr>
+                    <th pSortableColumn="rank" style="width: 3.25rem">
+                      #
+                      <p-sortIcon field="rank" />
+                    </th>
+                    <th>Team</th>
+                    <th pSortableColumn="player_name">
+                      Manager
+                      <p-sortIcon field="player_name" />
+                    </th>
+                    <th pSortableColumn="event_total" style="width: 3.5rem">
+                      GW
+                      <p-sortIcon field="event_total" />
+                    </th>
+                    <th pSortableColumn="total" style="width: 3.75rem">
+                      Tot
+                      <p-sortIcon field="total" />
+                    </th>
+                    <th style="width: 3.5rem">Δ</th>
+                  </tr>
+                </ng-template>
+
+                <ng-template #body let-entry>
+                  <tr [ngClass]="{ 'top-row': entry.rank <= 3 }">
+                    <td>
+                      <span class="rank-cell">
+                        @if (getRankIcon(entry.rank)) {
+                          <i [class]="getRankIcon(entry.rank)" [ngClass]="'rank-icon rank-' + entry.rank"></i>
+                        }
+                        {{ entry.rank }}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="team-cell">
+                        @if (entry.club_badge_src) {
+                          <img [src]="entry.club_badge_src" [alt]="entry.entry_name" class="club-badge" />
+                        }
+                        <span class="team-name">{{ entry.entry_name }}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="manager-name">{{ entry.player_name }}</span>
+                    </td>
+                    <td>
+                      <span class="points-chip gw">{{ entry.event_total }}</span>
+                    </td>
+                    <td>
+                      <span class="points-chip total">{{ entry.total }}</span>
+                    </td>
+                    <td>
+                      <p-tag
+                        [value]="getRankChangeLabel(getRankChange(entry))"
+                        [severity]="getRankChangeSeverity(getRankChange(entry))"
+                        styleClass="change-tag"
+                      />
+                    </td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </p-card>
+          </section>
+        </p-tabpanel>
+
+        <p-tabpanel value="teams">
+          <section class="tab-content">
+            <app-team-battle [standings]="standings()" [currentEvent]="currentEvent()" />
+          </section>
+        </p-tabpanel>
+      </p-tabpanels>
+    </p-tabs>
+  }
+</div>
