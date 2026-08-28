@@ -26,6 +26,7 @@
       <p-tablist>
         <p-tab value="teams">Team battle</p-tab>
         <p-tab value="overall">Overall standings</p-tab>
+        <p-tab value="h2h">H2H league</p-tab>
       </p-tablist>
 
       <p-tabpanels>
@@ -96,14 +97,12 @@
               <p-table
                 [value]="standings()"
                 dataKey="entry"
-                [expandedRowKeys]="expandedRows"
                 sortField="rank"
                 [sortOrder]="1"
                 styleClass="standings-table p-datatable-sm"
               >
                 <ng-template #header>
                   <tr>
-                    <th style="width: 2.25rem"></th>
                     <th pSortableColumn="rank" style="width: 3.25rem">
                       #
                       <p-sortIcon field="rank" />
@@ -113,6 +112,7 @@
                       Manager
                       <p-sortIcon field="player_name" />
                     </th>
+                    <th style="width: 3.25rem">Yet</th>
                     <th pSortableColumn="event_total" style="width: 3.5rem">
                       GW
                       <p-sortIcon field="event_total" />
@@ -121,28 +121,15 @@
                       Tot
                       <p-sortIcon field="total" />
                     </th>
-                    <th style="width: 3.5rem">Δ</th>
                   </tr>
                 </ng-template>
 
-                <ng-template #body let-entry let-expanded="expanded">
+                <ng-template #body let-entry>
                   <tr
-                    [ngClass]="{ 'top-row': entry.rank <= 3, 'standing-row-expanded': expanded }"
                     class="standing-row"
-                    (click)="toggleStandingRow(entry)"
+                    [class.top-row]="entry.rank <= 3"
+                    (click)="openStandingDetail(entry)"
                   >
-                    <td>
-                      <p-button
-                        type="button"
-                        [text]="true"
-                        [rounded]="true"
-                        [plain]="true"
-                        size="small"
-                        [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"
-                        styleClass="expand-btn"
-                        (click)="$event.stopPropagation(); toggleStandingRow(entry)"
-                      />
-                    </td>
                     <td>
                       <span class="rank-cell">
                         @if (getRankIcon(entry.rank)) {
@@ -171,109 +158,129 @@
                       <span class="manager-name">{{ entry.player_name }}</span>
                     </td>
                     <td>
+                      <span class="points-chip yet">
+                        {{ getPlayersLeft(entry.entry) ?? '—' }}
+                      </span>
+                    </td>
+                    <td>
                       <span class="points-chip gw">{{ entry.event_total }}</span>
                     </td>
                     <td>
                       <span class="points-chip total">{{ entry.total }}</span>
                     </td>
-                    <td>
-                      <p-tag
-                        [value]="getRankChangeLabel(getRankChange(entry))"
-                        [severity]="getRankChangeSeverity(getRankChange(entry))"
-                        styleClass="change-tag"
-                      />
-                    </td>
-                  </tr>
-                </ng-template>
-
-                <ng-template #expandedrow let-entry>
-                  <tr class="expanded-detail-row">
-                    <td [attr.colspan]="7">
-                      <div class="standing-detail">
-                        @if (isRowDetailLoading(entry.entry)) {
-                          <div class="standing-detail-loading">
-                            <p-progressSpinner strokeWidth="4" [style]="{ width: '2rem', height: '2rem' }" />
-                            <span>Loading manager details…</span>
-                          </div>
-                        } @else if (getRowDetailError(entry.entry); as detailError) {
-                          <p class="standing-detail-error">{{ detailError }}</p>
-                        } @else if (getRowDetail(entry.entry); as detail) {
-                          <div class="standing-detail-grid">
-                            <div class="standing-detail-item">
-                              <span class="standing-detail-label">Team value</span>
-                              <strong>{{ formatValue(detail.teamValue) }}</strong>
-                            </div>
-                            <div class="standing-detail-item">
-                              <span class="standing-detail-label">In the bank</span>
-                              <strong>{{ formatValue(detail.bank) }}</strong>
-                            </div>
-                            <div class="standing-detail-item">
-                              <span class="standing-detail-label">GW hits</span>
-                              <strong>{{ detail.transferCost ? '-' + detail.transferCost : '0' }}</strong>
-                            </div>
-                            <div class="standing-detail-item">
-                              <span class="standing-detail-label">Players</span>
-                              <strong>{{ detail.playersPlayed }}/{{ getPlayersTotal(detail) }}</strong>
-                            </div>
-                            <div class="standing-detail-item">
-                              <span class="standing-detail-label">Transfers this GW</span>
-                              <strong>{{ detail.transfers }}</strong>
-                            </div>
-                            <div class="standing-detail-item">
-                              <span class="standing-detail-label">Free transfers left</span>
-                              <strong>{{ detail.freeTransfers }}</strong>
-                            </div>
-                          </div>
-
-                          <div class="standing-transfers">
-                            <span class="standing-detail-label">Transfer moves</span>
-                            @if (detail.gwTransfers.length) {
-                              <ul class="transfer-move-list">
-                                @for (move of detail.gwTransfers; track move.playerOut + move.playerIn) {
-                                  <li class="transfer-move">
-                                    <span class="transfer-out">{{ move.playerOut }}</span>
-                                    <i class="pi pi-arrow-right transfer-arrow"></i>
-                                    <span class="transfer-in">{{ move.playerIn }}</span>
-                                  </li>
-                                }
-                              </ul>
-                            } @else {
-                              <span class="standing-chip-empty">No transfers this GW</span>
-                            }
-                          </div>
-
-                          <div class="standing-detail-chips">
-                            <div class="standing-chip-block">
-                              <span class="standing-detail-label">Active chip</span>
-                              @if (detail.activeChipLabel) {
-                                <p-tag [value]="detail.activeChipLabel" severity="warn" />
-                              } @else {
-                                <span class="standing-chip-empty">None</span>
-                              }
-                            </div>
-
-                            <div class="standing-chip-block">
-                              <span class="standing-detail-label">
-                                Chips {{ detail.chipsUsedCount }}/{{ detail.chips.length }} used
-                              </span>
-                              <div class="standing-chip-tags">
-                                @for (chip of detail.chips; track chip.key) {
-                                  <p-tag
-                                    [value]="chip.used ? chip.label + ' (GW' + chip.event + ')' : chip.label"
-                                    [severity]="chip.used ? 'secondary' : 'success'"
-                                    [styleClass]="chip.used ? 'chip-used' : 'chip-available'"
-                                  />
-                                }
-                              </div>
-                            </div>
-                          </div>
-                        }
-                      </div>
-                    </td>
                   </tr>
                 </ng-template>
               </p-table>
             </p-card>
+
+            <p-dialog
+              [header]="selectedStanding()?.entry_name ?? 'Manager details'"
+              [visible]="detailVisible()"
+              (visibleChange)="onDetailVisibleChange($event)"
+              [modal]="true"
+              [dismissableMask]="true"
+              [draggable]="false"
+              [resizable]="false"
+              [style]="{ width: 'min(28rem, 94vw)' }"
+              styleClass="standing-detail-dialog"
+            >
+              @if (selectedStanding(); as selected) {
+                <p class="standing-detail-manager">{{ selected.player_name }}</p>
+
+                @if (isRowDetailLoading(selected.entry)) {
+                  <div class="standing-detail-loading">
+                    <p-progressSpinner strokeWidth="4" [style]="{ width: '2rem', height: '2rem' }" />
+                    <span>Loading manager details…</span>
+                  </div>
+                } @else if (getRowDetailError(selected.entry); as detailError) {
+                  <p class="standing-detail-error">{{ detailError }}</p>
+                } @else if (getRowDetail(selected.entry); as detail) {
+                  <div class="standing-detail-grid">
+                    <div class="standing-detail-item">
+                      <span class="standing-detail-label">Rank change</span>
+                      <p-tag
+                        [value]="getRankChangeLabel(getRankChange(selected))"
+                        [severity]="getRankChangeSeverity(getRankChange(selected))"
+                        styleClass="change-tag"
+                      />
+                    </div>
+                    <div class="standing-detail-item">
+                      <span class="standing-detail-label">Team value</span>
+                      <strong>{{ formatValue(detail.teamValue) }}</strong>
+                    </div>
+                    <div class="standing-detail-item">
+                      <span class="standing-detail-label">In the bank</span>
+                      <strong>{{ formatValue(detail.bank) }}</strong>
+                    </div>
+                    <div class="standing-detail-item">
+                      <span class="standing-detail-label">GW hits</span>
+                      <strong>{{ detail.transferCost ? '-' + detail.transferCost : '0' }}</strong>
+                    </div>
+                    <div class="standing-detail-item">
+                      <span class="standing-detail-label">Players</span>
+                      <strong>{{ detail.playersPlayed }}/{{ getPlayersTotal(detail) }}</strong>
+                    </div>
+                    <div class="standing-detail-item">
+                      <span class="standing-detail-label">Transfers this GW</span>
+                      <strong>{{ detail.transfers }}</strong>
+                    </div>
+                    <div class="standing-detail-item">
+                      <span class="standing-detail-label">Free transfers left</span>
+                      <strong>{{ detail.freeTransfers }}</strong>
+                    </div>
+                  </div>
+
+                  <div class="standing-transfers">
+                    <span class="standing-detail-label">Transfer moves</span>
+                    @if (detail.gwTransfers.length) {
+                      <ul class="transfer-move-list">
+                        @for (move of detail.gwTransfers; track move.playerOut + move.playerIn) {
+                          <li class="transfer-move">
+                            <span class="transfer-out">{{ move.playerOut }}</span>
+                            <i class="pi pi-arrow-right transfer-arrow"></i>
+                            <span class="transfer-in">{{ move.playerIn }}</span>
+                          </li>
+                        }
+                      </ul>
+                    } @else {
+                      <span class="standing-chip-empty">No transfers this GW</span>
+                    }
+                  </div>
+
+                  <div class="standing-detail-chips">
+                    <div class="standing-chip-block">
+                      <span class="standing-detail-label">Active chip</span>
+                      @if (detail.activeChipLabel) {
+                        <p-tag [value]="detail.activeChipLabel" severity="warn" />
+                      } @else {
+                        <span class="standing-chip-empty">None</span>
+                      }
+                    </div>
+
+                    <div class="standing-chip-block">
+                      <span class="standing-detail-label">
+                        Chips {{ detail.chipsUsedCount }}/{{ detail.chips.length }} used
+                      </span>
+                      <div class="standing-chip-tags">
+                        @for (chip of detail.chips; track chip.key) {
+                          <p-tag
+                            [value]="chip.used ? chip.label + ' (GW' + chip.event + ')' : chip.label"
+                            [severity]="chip.used ? 'secondary' : 'success'"
+                            [styleClass]="chip.used ? 'chip-used' : 'chip-available'"
+                          />
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+              }
+            </p-dialog>
+          </section>
+        </p-tabpanel>
+
+        <p-tabpanel value="h2h">
+          <section class="tab-content">
+            <app-h2h-league [currentEvent]="currentEvent()" />
           </section>
         </p-tabpanel>
       </p-tabpanels>

@@ -445,6 +445,11 @@
   color: #00ff87;
 }
 
+.points-chip.yet {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+}
+
 .points-chip.total {
   background: rgba(55, 0, 255, 0.18);
   color: #b8a9ff;
@@ -459,12 +464,6 @@
   background: rgba(0, 255, 135, 0.04);
 }
 
-:host ::ng-deep .expand-btn.p-button {
-  width: 1.75rem;
-  height: 1.75rem;
-  padding: 0;
-}
-
 :host ::ng-deep .standing-row {
   cursor: pointer;
 }
@@ -473,9 +472,10 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
-.standing-detail {
-  padding: 0.75rem 0.5rem 0.85rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+.standing-detail-manager {
+  margin: 0 0 0.85rem;
+  color: var(--p-text-muted-color);
+  font-size: 0.8125rem;
 }
 
 .standing-detail-loading {

@@ -2,6 +2,7 @@ import { DatePipe, NgClass } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
+import { DialogModule } from 'primeng/dialog';
 import { MessageModule } from 'primeng/message';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TableModule } from 'primeng/table';
@@ -14,6 +15,7 @@ import { environment } from '../../../environments/environment';
 import { FplEvent, FplStandingEntry } from '../../core/models/fpl.models';
 import { ManagerProfile } from '../../core/models/team-battle.models';
 import { FplApiService } from '../../core/services/fpl-api.service';
+import { H2hLeagueComponent } from '../h2h-league/h2h-league.component';
 import { TeamBattleComponent } from '../team-battle/team-battle.component';
 
 @Component({
@@ -24,12 +26,14 @@ import { TeamBattleComponent } from '../team-battle/team-battle.component';
     TableModule,
     CardModule,
     ButtonModule,
+    DialogModule,
     TagModule,
     ToolbarModule,
     MessageModule,
     ProgressSpinnerModule,
     TabsModule,
     TeamBattleComponent,
+    H2hLeagueComponent,
   ],
   templateUrl: './league-standings.component.html',
   styleUrl: './league-standings.component.scss',
@@ -45,14 +49,24 @@ export class LeagueStandingsComponent {
   protected readonly standings = signal<FplStandingEntry[]>([]);
   protected readonly leagueUrl = environment.leagueUrl;
   protected activeTab = 'teams';
-  protected expandedRows: Record<string, boolean> = {};
 
   private readonly rowDetails = signal<Record<number, ManagerProfile>>({});
   private readonly rowDetailLoading = signal<Record<number, boolean>>({});
   private readonly rowDetailErrors = signal<Record<number, string>>({});
   protected readonly activeChips = signal<Record<number, string | null>>({});
+  protected readonly playersLeftByEntry = signal<Record<number, number>>({});
+  protected readonly selectedEntryId = signal<number | null>(null);
+  protected readonly detailVisible = signal(false);
 
   protected readonly topThree = computed(() => this.standings().slice(0, 3));
+  protected readonly selectedStanding = computed(() => {
+    const entryId = this.selectedEntryId();
+    if (entryId === null) {
+      return null;
+    }
+
+    return this.standings().find((entry) => entry.entry === entryId) ?? null;
+  });
   protected readonly averageGwPoints = computed(() => {
     const entries = this.standings();
     if (!entries.length) {
@@ -75,7 +89,8 @@ export class LeagueStandingsComponent {
     this.rowDetailLoading.set({});
     this.rowDetailErrors.set({});
     this.activeChips.set({});
-    this.expandedRows = {};
+    this.playersLeftByEntry.set({});
+    this.closeDetailModal();
 
     forkJoin({
       response: this.fplApi.getLeagueStandings(),
@@ -90,7 +105,7 @@ export class LeagueStandingsComponent {
         this.loading.set(false);
 
         if (currentEvent?.id) {
-          this.loadActiveChips(
+          this.loadStandingExtras(
             response.standings.results.map((entry) => entry.entry),
             currentEvent.id,
           );
@@ -105,19 +120,22 @@ export class LeagueStandingsComponent {
     });
   }
 
-  toggleStandingRow(entry: FplStandingEntry): void {
-    const key = String(entry.entry);
-    const isExpanded = Boolean(this.expandedRows[key]);
-
-    if (isExpanded) {
-      const next = { ...this.expandedRows };
-      delete next[key];
-      this.expandedRows = next;
-      return;
-    }
-
-    this.expandedRows = { ...this.expandedRows, [key]: true };
+  openStandingDetail(entry: FplStandingEntry): void {
+    this.selectedEntryId.set(entry.entry);
+    this.detailVisible.set(true);
     this.loadRowDetail(entry.entry);
+  }
+
+  closeDetailModal(): void {
+    this.detailVisible.set(false);
+    this.selectedEntryId.set(null);
+  }
+
+  onDetailVisibleChange(visible: boolean): void {
+    this.detailVisible.set(visible);
+    if (!visible) {
+      this.selectedEntryId.set(null);
+    }
   }
 
   getRowDetail(entryId: number): ManagerProfile | undefined {
@@ -130,6 +148,11 @@ export class LeagueStandingsComponent {
 
   getRowDetailError(entryId: number): string | undefined {
     return this.rowDetailErrors()[entryId];
+  }
+
+  getPlayersLeft(entryId: number): number | null {
+    const value = this.playersLeftByEntry()[entryId];
+    return value === undefined ? null : value;
   }
 
   formatValue(value: number): string {
@@ -162,7 +185,7 @@ export class LeagueStandingsComponent {
     }
 
     if (change === 0) {
-      return '—';
+      return '0';
     }
 
     return change > 0 ? `+${change}` : `${change}`;
@@ -176,9 +199,21 @@ export class LeagueStandingsComponent {
     return '';
   }
 
-  private loadActiveChips(entryIds: number[], eventId: number): void {
-    this.fplApi.getActiveChips(entryIds, eventId).subscribe({
-      next: (chips) => this.activeChips.set(chips),
+  private loadStandingExtras(entryIds: number[], eventId: number): void {
+    this.fplApi.getStandingLiveExtras(entryIds, eventId).subscribe({
+      next: (extras) => {
+        const chips: Record<number, string | null> = {};
+        const playersLeft: Record<number, number> = {};
+
+        for (const [entryId, extra] of Object.entries(extras)) {
+          const id = Number(entryId);
+          chips[id] = extra.activeChip;
+          playersLeft[id] = extra.playersLeft;
+        }
+
+        this.activeChips.set(chips);
+        this.playersLeftByEntry.set(playersLeft);
+      },
     });
   }
 
@@ -207,6 +242,13 @@ export class LeagueStandingsComponent {
       next: (profile) => {
         this.rowDetails.update((details) => ({ ...details, [entryId]: profile }));
         this.rowDetailLoading.update((loading) => ({ ...loading, [entryId]: false }));
+        this.playersLeftByEntry.update((map) => ({
+          ...map,
+          [entryId]: profile.playersLeftToPlay,
+        }));
+        if (profile.activeChip) {
+          this.activeChips.update((chips) => ({ ...chips, [entryId]: profile.activeChip }));
+        }
       },
       error: () => {
         this.rowDetailErrors.update((errors) => ({

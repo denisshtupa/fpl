@@ -17,6 +17,8 @@ import {
   FplEvent,
   FplEventLiveResponse,
   FplFixture,
+  FplH2hMatchesPage,
+  FplH2hStandingsResponse,
   FplLeagueStandingsResponse,
   FplStandingEntry,
   FplTransfer,
@@ -48,6 +50,18 @@ export class FplApiService {
       `${this.baseUrl}/leagues-classic/${leagueId}/standings/`,
       { params },
     );
+  }
+
+  getH2hStandings(leagueId = environment.h2hLeagueId): Observable<FplH2hStandingsResponse> {
+    return this.http.get<FplH2hStandingsResponse>(`${this.baseUrl}/leagues-h2h/${leagueId}/standings/`);
+  }
+
+  getH2hMatches(eventId: number, leagueId = environment.h2hLeagueId, page = 1): Observable<FplH2hMatchesPage> {
+    const params = new HttpParams().set('page', page).set('event', eventId);
+
+    return this.http.get<FplH2hMatchesPage>(`${this.baseUrl}/leagues-h2h-matches/league/${leagueId}/`, {
+      params,
+    });
   }
 
   getCurrentEvent(): Observable<FplEvent | undefined> {
@@ -141,19 +155,54 @@ export class FplApiService {
     return this.getManagerProfilesForEntries([entryId], eventId).pipe(map((profiles) => profiles[0]));
   }
 
-  getActiveChips(entryIds: number[], eventId: number): Observable<Record<number, string | null>> {
+  /** Active chip + players still to play for the current GW (shared live/fixture fetch). */
+  getStandingLiveExtras(
+    entryIds: number[],
+    eventId: number,
+  ): Observable<Record<number, { activeChip: string | null; playersLeft: number }>> {
     if (!entryIds.length) {
       return of({});
     }
 
-    return forkJoin(
-      entryIds.map((entryId) =>
-        this.getEntryPicks(entryId, eventId).pipe(
-          map((picks) => [entryId, picks.active_chip] as const),
-          catchError(() => of([entryId, null] as const)),
+    return forkJoin({
+      bootstrap: this.getBootstrapStatic(),
+      live: this.getEventLive(eventId),
+      fixtures: this.getFixtures(eventId),
+      picks: forkJoin(
+        entryIds.map((entryId) =>
+          this.getEntryPicks(entryId, eventId).pipe(catchError(() => of(null))),
         ),
       ),
-    ).pipe(map((pairs) => Object.fromEntries(pairs)));
+    }).pipe(
+      map(({ bootstrap, live, fixtures, picks }) => {
+        const lookup = this.buildBootstrapLookup(bootstrap);
+        const livePoints = new Map(live.elements.map((element) => [element.id, element.stats]));
+        const fixtureByTeam = this.buildFixtureLookup(fixtures);
+        const extras: Record<number, { activeChip: string | null; playersLeft: number }> = {};
+
+        entryIds.forEach((entryId, index) => {
+          const picksResponse = picks[index];
+          if (!picksResponse) {
+            extras[entryId] = { activeChip: null, playersLeft: 0 };
+            return;
+          }
+
+          const activeChip = picksResponse.active_chip;
+          const squad = picksResponse.picks.map((pick) =>
+            this.buildSquadPlayer(pick, lookup, livePoints, fixtureByTeam, activeChip),
+          );
+          const relevantSquad =
+            activeChip === 'bboost' ? squad : squad.filter((player) => !player.isBench);
+          const playersLeft = relevantSquad.filter(
+            (player) => player.status === 'upcoming' || player.status === 'live',
+          ).length;
+
+          extras[entryId] = { activeChip, playersLeft };
+        });
+
+        return extras;
+      }),
+    );
   }
 
   getChipShortLabel(chip: string | null | undefined): string | null {
