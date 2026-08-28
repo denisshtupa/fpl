@@ -1,10 +1,29 @@
+:host {
+  display: block;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+}
+
 .team-battle {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   font-size: 0.8125rem;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
+:host ::ng-deep .p-card {
+  max-width: 100%;
+  min-width: 0;
+}
+
+:host ::ng-deep .p-card-body {
+  max-width: 100%;
+  min-width: 0;
+}
 :host ::ng-deep .winner-card .p-card-body {
   padding: 0.875rem 1rem;
 }
@@ -27,8 +46,8 @@
 .winner-content h2 {
   margin: 0.25rem 0 0;
   font-size: 1.25rem;
+  overflow-wrap: anywhere;
 }
-
 .winner-detail {
   margin: 0.25rem 0 0;
   color: var(--p-text-muted-color);
@@ -78,6 +97,7 @@
 
 .players-left-team-header strong {
   font-size: 0.8125rem;
+  overflow-wrap: anywhere;
 }
 
 .players-left-team-total {
@@ -144,8 +164,10 @@
 
 .team-scoreboard {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 :host ::ng-deep .team-card .p-card-body {
@@ -164,8 +186,8 @@
 .team-card-header h3 {
   margin: 0;
   font-size: 0.875rem;
+  overflow-wrap: anywhere;
 }
-
 .team-total {
   font-size: 1.125rem;
   font-weight: 800;
@@ -190,16 +212,41 @@
   border-bottom: none;
 }
 
+.member-scores {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.member-gw {
+  font-size: 0.6875rem;
+  color: var(--p-text-muted-color);
+}
+
 .charts-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .chart-container {
   height: 240px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
 }
 
+:host ::ng-deep .chart-container .p-chart {
+  max-width: 100%;
+}
+
+:host ::ng-deep .chart-container canvas {
+  max-width: 100% !important;
+}
 .chart-container-tall {
   height: 280px;
 }
@@ -233,12 +280,21 @@
   justify-content: space-between;
   gap: 0.5rem;
   margin-bottom: 0.35rem;
+  min-width: 0;
+}
+
+.h2h-main > div:first-child {
+  min-width: 0;
+  overflow: hidden;
 }
 
 .h2h-entry {
   display: block;
   font-size: 0.625rem;
   color: var(--p-text-muted-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .h2h-points {
@@ -261,6 +317,14 @@
 :host ::ng-deep .h2h-team-tag {
   font-size: 0.625rem;
   max-width: 100%;
+  display: inline-flex;
+}
+
+:host ::ng-deep .h2h-team-tag .p-tag-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .h2h-team-totals {
@@ -279,6 +343,17 @@
   border-radius: 0.625rem;
   background: rgba(255, 255, 255, 0.03);
   font-size: 0.75rem;
+  min-width: 0;
+}
+
+.h2h-team-total strong:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.h2h-team-total span:last-child {
+  flex-shrink: 0;
+  text-align: right;
 }
 
 .details-message {
@@ -308,6 +383,7 @@
 .manager-group-header h3 {
   margin: 0;
   font-size: 0.9375rem;
+  overflow-wrap: anywhere;
 }
 
 .accordion-header {
@@ -316,6 +392,14 @@
   align-items: flex-start;
   gap: 0.5rem;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+:host ::ng-deep .manager-accordion .p-accordionheader,
+:host ::ng-deep .manager-accordion .p-accordionheader-content {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .accordion-subtitle {
@@ -323,18 +407,23 @@
   color: var(--p-text-muted-color);
   font-size: 0.6875rem;
   font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .accordion-meta {
   display: flex;
-  gap: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
   color: var(--p-text-muted-color);
   font-size: 0.75rem;
   align-items: center;
   width: 100%;
+  min-width: 0;
   justify-content: space-between;
 }
-
 .gw-points-badge {
   display: inline-flex;
   align-items: center;
@@ -382,7 +471,7 @@
 }
 
 .chip-row-label {
-  min-width: 5rem;
+  flex: 0 0 auto;
   color: var(--p-text-muted-color);
   font-size: 0.75rem;
 }
