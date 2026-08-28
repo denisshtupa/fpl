@@ -138,7 +138,8 @@
   min-width: 0;
 }
 
-:host ::ng-deep app-team-battle {
+:host ::ng-deep app-team-battle,
+:host ::ng-deep app-h2h-league {
   display: block;
   max-width: 100%;
   min-width: 0;

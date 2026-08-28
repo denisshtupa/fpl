@@ -33,44 +33,35 @@
   font-size: 0.75rem;
 }
 
-.h2h-summary {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
+:host ::ng-deep .h2h-card,
+:host ::ng-deep .leader-card,
+:host ::ng-deep .table-card {
+  max-width: 100%;
+  min-width: 0;
 }
 
-.h2h-kicker {
-  margin: 0;
+:host ::ng-deep .leader-card .p-card-body {
+  padding: 0.875rem 1rem;
+}
+
+:host ::ng-deep .table-card .p-card-body {
+  padding: 0.5rem 0.5rem 0.75rem;
+}
+
+:host ::ng-deep .table-card .p-card-title {
+  font-size: 0.9375rem;
+}
+
+:host ::ng-deep .table-card .p-card-subtitle {
+  font-size: 0.6875rem;
+}
+
+.leader-label {
+  margin: 0 0 0.75rem;
+  color: #00ff87;
   font-size: 0.625rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #00ff87;
-}
-
-.h2h-title {
-  margin: 0.2rem 0 0;
-  font-size: 1.125rem;
-  line-height: 1.25;
-}
-
-.h2h-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  flex-shrink: 0;
-  color: var(--p-text-muted-color);
-  text-decoration: none;
-  font-size: 0.75rem;
-}
-
-.h2h-link:hover {
-  color: #00ff87;
-}
-
-:host ::ng-deep .h2h-card {
-  max-width: 100%;
-  min-width: 0;
 }
 
 .gw-picker {
@@ -193,14 +184,6 @@
 
 .match-side.loser {
   opacity: 0.72;
-}
-
-.leader-label {
-  margin: 0 0 0.75rem;
-  color: #00ff87;
-  font-size: 0.625rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
 }
 
 .podium-list {
@@ -454,10 +437,6 @@
   .h2h-league {
     gap: 1rem;
     font-size: 0.875rem;
-  }
-
-  .h2h-title {
-    font-size: 1.25rem;
   }
 
   .manager-name-inline {

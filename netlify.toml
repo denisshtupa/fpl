@@ -5,11 +5,7 @@
 [build.environment]
   NODE_VERSION = "22"
 
-[[redirects]]
-  from = "/api/*"
-  to = "https://fantasy.premierleague.com/api/:splat"
-  status = 200
-  force = true
+# /api/* is handled by netlify/edge-functions/fpl-api-proxy.js
 
 [[redirects]]
   from = "/*"
