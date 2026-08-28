@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, forkJoin, map, shareReplay } from 'rxjs';
+import { Observable, forkJoin, map, of, shareReplay, catchError } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 
@@ -8,6 +8,7 @@ import { TEAM_BATTLE_ENTRY_IDS, TEAM_BATTLE_TEAMS } from '../config/team-battle.
 import {
   ALL_FPL_CHIPS,
   FPL_CHIP_LABELS,
+  FPL_CHIP_SHORT,
   FixtureMatchStatus,
   FplBootstrapStatic,
   FplEntry,
@@ -16,13 +17,17 @@ import {
   FplEvent,
   FplEventLiveResponse,
   FplFixture,
+  FplH2hMatchesPage,
+  FplH2hStandingsResponse,
   FplLeagueStandingsResponse,
   FplStandingEntry,
+  FplTransfer,
 } from '../models/fpl.models';
 import {
   ManagerChipInfo,
   ManagerProfile,
   ManagerSquadPlayer,
+  ManagerTransferMove,
   SquadPlayerStatus,
 } from '../models/team-battle.models';
 
@@ -47,6 +52,18 @@ export class FplApiService {
     );
   }
 
+  getH2hStandings(leagueId = environment.h2hLeagueId): Observable<FplH2hStandingsResponse> {
+    return this.http.get<FplH2hStandingsResponse>(`${this.baseUrl}/leagues-h2h/${leagueId}/standings/`);
+  }
+
+  getH2hMatches(eventId: number, leagueId = environment.h2hLeagueId, page = 1): Observable<FplH2hMatchesPage> {
+    const params = new HttpParams().set('page', page).set('event', eventId);
+
+    return this.http.get<FplH2hMatchesPage>(`${this.baseUrl}/leagues-h2h-matches/league/${leagueId}/`, {
+      params,
+    });
+  }
+
   getCurrentEvent(): Observable<FplEvent | undefined> {
     return this.getBootstrapStatic().pipe(map((data) => data.events.find((event) => event.is_current)));
   }
@@ -61,6 +78,11 @@ export class FplApiService {
     return this.bootstrapCache$;
   }
 
+  /** Drop cached bootstrap so the next refresh picks up live element/event data. */
+  clearBootstrapCache(): void {
+    this.bootstrapCache$ = undefined;
+  }
+
   getEntry(entryId: number): Observable<FplEntry> {
     return this.http.get<FplEntry>(`${this.baseUrl}/entry/${entryId}/`);
   }
@@ -71,6 +93,12 @@ export class FplApiService {
 
   getEntryPicks(entryId: number, eventId: number): Observable<FplEntryPicksResponse> {
     return this.http.get<FplEntryPicksResponse>(`${this.baseUrl}/entry/${entryId}/event/${eventId}/picks/`);
+  }
+
+  getEntryTransfers(entryId: number): Observable<FplTransfer[]> {
+    return this.http.get<FplTransfer[]>(`${this.baseUrl}/entry/${entryId}/transfers/`).pipe(
+      catchError(() => of([])),
+    );
   }
 
   getEventLive(eventId: number): Observable<FplEventLiveResponse> {
@@ -84,25 +112,36 @@ export class FplApiService {
   }
 
   getManagerProfiles(eventId: number): Observable<ManagerProfile[]> {
+    return this.getManagerProfilesForEntries(TEAM_BATTLE_ENTRY_IDS, eventId);
+  }
+
+  getManagerProfilesForEntries(entryIds: number[], eventId: number): Observable<ManagerProfile[]> {
+    if (!entryIds.length) {
+      return of([]);
+    }
+
     return forkJoin({
       bootstrap: this.getBootstrapStatic(),
       live: this.getEventLive(eventId),
       fixtures: this.getFixtures(eventId),
-      entries: forkJoin(TEAM_BATTLE_ENTRY_IDS.map((entryId) => this.getEntry(entryId))),
-      histories: forkJoin(TEAM_BATTLE_ENTRY_IDS.map((entryId) => this.getEntryHistory(entryId))),
-      picks: forkJoin(TEAM_BATTLE_ENTRY_IDS.map((entryId) => this.getEntryPicks(entryId, eventId))),
+      entries: forkJoin(entryIds.map((entryId) => this.getEntry(entryId))),
+      histories: forkJoin(entryIds.map((entryId) => this.getEntryHistory(entryId))),
+      picks: forkJoin(entryIds.map((entryId) => this.getEntryPicks(entryId, eventId))),
+      transfers: forkJoin(entryIds.map((entryId) => this.getEntryTransfers(entryId))),
     }).pipe(
-      map(({ bootstrap, live, fixtures, entries, histories, picks }) => {
+      map(({ bootstrap, live, fixtures, entries, histories, picks, transfers }) => {
         const lookup = this.buildBootstrapLookup(bootstrap);
         const livePoints = new Map(live.elements.map((element) => [element.id, element.stats]));
         const fixtureByTeam = this.buildFixtureLookup(fixtures);
 
-        return TEAM_BATTLE_ENTRY_IDS.map((entryId, index) =>
+        return entryIds.map((entryId, index) =>
           this.buildManagerProfile(
             entryId,
             entries[index],
             histories[index],
             picks[index],
+            transfers[index],
+            eventId,
             lookup,
             livePoints,
             fixtureByTeam,
@@ -110,6 +149,68 @@ export class FplApiService {
         );
       }),
     );
+  }
+
+  getManagerProfile(entryId: number, eventId: number): Observable<ManagerProfile> {
+    return this.getManagerProfilesForEntries([entryId], eventId).pipe(map((profiles) => profiles[0]));
+  }
+
+  /** Active chip + players still to play for the current GW (shared live/fixture fetch). */
+  getStandingLiveExtras(
+    entryIds: number[],
+    eventId: number,
+  ): Observable<Record<number, { activeChip: string | null; playersLeft: number }>> {
+    if (!entryIds.length) {
+      return of({});
+    }
+
+    return forkJoin({
+      bootstrap: this.getBootstrapStatic(),
+      live: this.getEventLive(eventId),
+      fixtures: this.getFixtures(eventId),
+      picks: forkJoin(
+        entryIds.map((entryId) =>
+          this.getEntryPicks(entryId, eventId).pipe(catchError(() => of(null))),
+        ),
+      ),
+    }).pipe(
+      map(({ bootstrap, live, fixtures, picks }) => {
+        const lookup = this.buildBootstrapLookup(bootstrap);
+        const livePoints = new Map(live.elements.map((element) => [element.id, element.stats]));
+        const fixtureByTeam = this.buildFixtureLookup(fixtures);
+        const extras: Record<number, { activeChip: string | null; playersLeft: number }> = {};
+
+        entryIds.forEach((entryId, index) => {
+          const picksResponse = picks[index];
+          if (!picksResponse) {
+            extras[entryId] = { activeChip: null, playersLeft: 0 };
+            return;
+          }
+
+          const activeChip = picksResponse.active_chip;
+          const squad = picksResponse.picks.map((pick) =>
+            this.buildSquadPlayer(pick, lookup, livePoints, fixtureByTeam, activeChip),
+          );
+          const relevantSquad =
+            activeChip === 'bboost' ? squad : squad.filter((player) => !player.isBench);
+          const playersLeft = relevantSquad.filter(
+            (player) => player.status === 'upcoming' || player.status === 'live',
+          ).length;
+
+          extras[entryId] = { activeChip, playersLeft };
+        });
+
+        return extras;
+      }),
+    );
+  }
+
+  getChipShortLabel(chip: string | null | undefined): string | null {
+    if (!chip) {
+      return null;
+    }
+
+    return FPL_CHIP_SHORT[chip] ?? chip.toUpperCase();
   }
 
   getRankChange(entry: FplStandingEntry): number | null {
@@ -209,6 +310,8 @@ export class FplApiService {
     entry: FplEntry,
     history: FplEntryHistoryResponse,
     picksResponse: FplEntryPicksResponse,
+    transfers: FplTransfer[],
+    eventId: number,
     lookup: BootstrapLookup,
     livePoints: Map<number, FplEventLiveResponse['elements'][number]['stats']>,
     fixtureByTeam: Map<number, FixtureMatchStatus>,
@@ -234,11 +337,15 @@ export class FplApiService {
     ).length;
 
     const transferCost = picksResponse.entry_history.event_transfers_cost;
-    const officialGwPoints = picksResponse.entry_history.points;
-    const officialTotalPoints = picksResponse.entry_history.total_points;
     const liveRawPoints = relevantSquad.reduce((sum, player) => sum + player.scoredPoints, 0);
-    const liveGwPoints = liveRawPoints - transferCost;
-    const liveTotalPoints = officialTotalPoints - officialGwPoints + liveGwPoints;
+    const liveGwFromSquad = liveRawPoints - transferCost;
+    // Entry summary / standings stay live during an active GW; picks history often lags until matches finish.
+    const liveGwPoints = entry.summary_event_points || liveGwFromSquad;
+    const liveTotalPoints =
+      entry.summary_overall_points ||
+      picksResponse.entry_history.total_points -
+        picksResponse.entry_history.points +
+        liveGwFromSquad;
     const startingXiPoints = squad
       .filter((player) => !player.isBench)
       .reduce((sum, player) => sum + player.scoredPoints, 0);
@@ -261,6 +368,9 @@ export class FplApiService {
       current.totalPoints = liveTotalPoints;
     }
 
+    const gwTransfers = this.buildGwTransfers(transfers, eventId, lookup);
+    const freeTransfers = this.computeFreeTransfers(history, eventId);
+
     return {
       entryId,
       shortName: member?.shortName ?? entry.name,
@@ -277,6 +387,8 @@ export class FplApiService {
       benchPoints,
       transferCost,
       transfers: picksResponse.entry_history.event_transfers,
+      freeTransfers,
+      gwTransfers,
       activeChip,
       activeChipLabel: activeChip ? FPL_CHIP_LABELS[activeChip] ?? activeChip : null,
       chips,
@@ -287,6 +399,56 @@ export class FplApiService {
       playersPlayed,
       gwHistory,
     };
+  }
+
+  private buildGwTransfers(
+    transfers: FplTransfer[],
+    eventId: number,
+    lookup: BootstrapLookup,
+  ): ManagerTransferMove[] {
+    return transfers
+      .filter((transfer) => transfer.event === eventId)
+      .sort((a, b) => a.time.localeCompare(b.time))
+      .map((transfer) => ({
+        playerIn: lookup.elements.get(transfer.element_in)?.web_name ?? `Player ${transfer.element_in}`,
+        playerOut: lookup.elements.get(transfer.element_out)?.web_name ?? `Player ${transfer.element_out}`,
+        playerInCost: transfer.element_in_cost,
+        playerOutCost: transfer.element_out_cost,
+      }));
+  }
+
+  /** Free transfers available for the next deadline (after this GW's transfers + weekly replenishment). */
+  private computeFreeTransfers(history: FplEntryHistoryResponse, eventId: number): number {
+    const maxFreeTransfers = 2;
+    const chipByEvent = new Map(history.chips.map((chip) => [chip.event, chip.name]));
+    let freeTransfers = 0;
+
+    const weeks = history.current.slice().sort((a, b) => a.event - b.event);
+
+    for (const gw of weeks) {
+      if (gw.event > 1) {
+        freeTransfers = Math.min(maxFreeTransfers, freeTransfers + 1);
+      }
+
+      const chip = chipByEvent.get(gw.event);
+      if (chip === 'wildcard' || chip === 'freehit') {
+        // Next week starts from 0 banked, then gains the weekly free transfer.
+        freeTransfers = 0;
+        if (gw.event >= eventId) {
+          break;
+        }
+        continue;
+      }
+
+      freeTransfers = Math.max(0, freeTransfers - gw.event_transfers);
+
+      if (gw.event >= eventId) {
+        break;
+      }
+    }
+
+    // Next deadline window replenishes one free transfer (capped).
+    return Math.min(maxFreeTransfers, freeTransfers + 1);
   }
 
   private buildSquadPlayer(

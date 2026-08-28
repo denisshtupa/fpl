@@ -35,12 +35,37 @@ export class TeamBattleComponent {
   protected readonly detailsError = signal<string | null>(null);
   protected readonly managerProfiles = signal<ManagerProfile[]>([]);
 
+  /** Prefer live league standings totals so Team battle matches Overall during an active GW. */
+  protected readonly liveManagerProfiles = computed(() => {
+    const standingsByEntry = new Map(this.standings().map((entry) => [entry.entry, entry]));
+
+    return this.managerProfiles().map((profile) => {
+      const standing = standingsByEntry.get(profile.entryId);
+      if (!standing) {
+        return profile;
+      }
+
+      const gwHistory = profile.gwHistory.map((gw, index, all) =>
+        index === all.length - 1
+          ? { ...gw, points: standing.event_total, totalPoints: standing.total }
+          : gw,
+      );
+
+      return {
+        ...profile,
+        gwPoints: standing.event_total,
+        totalPoints: standing.total,
+        gwHistory,
+      };
+    });
+  });
+
   protected readonly teams = computed(() => this.buildTeams());
   protected readonly players = computed(() =>
     this.teams().flatMap((team) => team.players).sort((a, b) => b.totalPoints - a.totalPoints),
   );
   protected readonly profilesByTeam = computed(() => {
-    const profiles = this.managerProfiles();
+    const profiles = this.liveManagerProfiles();
 
     return TEAM_BATTLE_TEAMS.map((team) => ({
       ...team,
@@ -72,7 +97,7 @@ export class TeamBattleComponent {
   protected readonly isTie = computed(() => this.winner() === null && this.teams().length === 2);
 
   protected readonly playersLeftByTeam = computed(() => {
-    const profiles = this.managerProfiles();
+    const profiles = this.liveManagerProfiles();
 
     return TEAM_BATTLE_TEAMS.map((team) => {
       const members = profiles
@@ -96,7 +121,7 @@ export class TeamBattleComponent {
   });
 
   protected readonly teamChartData = computed<ChartData<'line'>>(() => {
-    const profiles = this.managerProfiles();
+    const profiles = this.liveManagerProfiles();
     const labels = this.gameweekLabels(profiles);
 
     return {
@@ -124,7 +149,7 @@ export class TeamBattleComponent {
   });
 
   protected readonly playerChartData = computed<ChartData<'line'>>(() => {
-    const profiles = this.managerProfiles();
+    const profiles = this.liveManagerProfiles();
     const labels = this.gameweekLabels(profiles);
 
     return {
@@ -209,9 +234,14 @@ export class TeamBattleComponent {
 
   constructor() {
     effect(() => {
-      const event = this.currentEvent();
-      if (event?.id) {
-        this.loadManagerDetails(event.id);
+      const eventId = this.currentEvent()?.id;
+      // Re-fetch squad/live data whenever Overall standings refresh (live totals change).
+      const standingsFingerprint = this.standings()
+        .map((entry) => `${entry.entry}:${entry.event_total}:${entry.total}`)
+        .join('|');
+
+      if (eventId && standingsFingerprint) {
+        this.loadManagerDetails(eventId);
       }
     });
   }
@@ -220,8 +250,12 @@ export class TeamBattleComponent {
     return `£${(value / 10).toFixed(1)}m`;
   }
 
+  protected getChipShort(chip: string | null | undefined): string | null {
+    return this.fplApi.getChipShortLabel(chip);
+  }
+
   protected getProfile(entryId: number): ManagerProfile | undefined {
-    return this.managerProfiles().find((profile) => profile.entryId === entryId);
+    return this.liveManagerProfiles().find((profile) => profile.entryId === entryId);
   }
 
   private loadManagerDetails(eventId: number): void {
@@ -242,7 +276,7 @@ export class TeamBattleComponent {
 
   private buildTeams(): TeamBattleSummary[] {
     const standingsByEntry = new Map(this.standings().map((entry) => [entry.entry, entry]));
-    const profilesByEntry = new Map(this.managerProfiles().map((profile) => [profile.entryId, profile]));
+    const profilesByEntry = new Map(this.liveManagerProfiles().map((profile) => [profile.entryId, profile]));
 
     return TEAM_BATTLE_TEAMS.map((team) => {
       const players = team.members.map((member) => {
@@ -257,9 +291,11 @@ export class TeamBattleComponent {
           teamColor: team.color,
           entryName: profile?.entryName ?? standing?.entry_name ?? member.shortName,
           playerName: profile?.playerName ?? standing?.player_name ?? '—',
-          gwPoints: profile?.gwPoints ?? standing?.event_total ?? 0,
-          totalPoints: profile?.totalPoints ?? standing?.total ?? 0,
+          // Standings are the live source during an active GW (same as Overall).
+          gwPoints: standing?.event_total ?? profile?.gwPoints ?? 0,
+          totalPoints: standing?.total ?? profile?.totalPoints ?? 0,
           rank: standing?.rank ?? 0,
+          activeChip: profile?.activeChip ?? null,
         } satisfies TeamBattlePlayer;
       });
 

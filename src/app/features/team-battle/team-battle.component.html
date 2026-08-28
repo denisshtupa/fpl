@@ -25,7 +25,12 @@
                 <p-accordion-header>
                   <div class="accordion-header">
                     <div>
-                      <strong>{{ profile.shortName }}</strong>
+                      <strong>
+                        {{ profile.shortName }}
+                        @if (getChipShort(profile.activeChip); as chip) {
+                          <p-tag [value]="chip" severity="warn" styleClass="active-chip-tag" />
+                        }
+                      </strong>
                       <span class="accordion-subtitle">{{ profile.entryName }}</span>
                     </div>
                     <div class="accordion-meta">
@@ -55,11 +60,15 @@
                     </div>
                     <div class="stat-item">
                       <span class="stat-label">Transfer hits</span>
-                      <strong>-{{ profile.transferCost }}</strong>
+                      <strong>{{ profile.transferCost ? '-' + profile.transferCost : '0' }}</strong>
                     </div>
                     <div class="stat-item">
-                      <span class="stat-label">Transfers</span>
+                      <span class="stat-label">Transfers this GW</span>
                       <strong>{{ profile.transfers }}</strong>
+                    </div>
+                    <div class="stat-item">
+                      <span class="stat-label">Free transfers left</span>
+                      <strong>{{ profile.freeTransfers }}</strong>
                     </div>
                   </div>
 
@@ -83,6 +92,23 @@
                         />
                       }
                     </div>
+                  </div>
+
+                  <div class="profile-transfers">
+                    <span class="stat-label">Transfer moves</span>
+                    @if (profile.gwTransfers.length) {
+                      <ul class="transfer-move-list">
+                        @for (move of profile.gwTransfers; track move.playerOut + move.playerIn) {
+                          <li class="transfer-move">
+                            <span class="transfer-out">{{ move.playerOut }}</span>
+                            <i class="pi pi-arrow-right transfer-arrow"></i>
+                            <span class="transfer-in">{{ move.playerIn }}</span>
+                          </li>
+                        }
+                      </ul>
+                    } @else {
+                      <span class="chip-empty">No transfers this GW</span>
+                    }
                   </div>
 
                   <div class="squad-sections">
@@ -169,7 +195,12 @@
         <div class="h2h-card" [style.borderColor]="player.teamColor">
           <div class="h2h-main">
             <div>
-              <strong>{{ player.shortName }}</strong>
+              <strong>
+                {{ player.shortName }}
+                @if (getChipShort(player.activeChip); as chip) {
+                  <p-tag [value]="chip" severity="warn" styleClass="active-chip-tag" />
+                }
+              </strong>
               <span class="h2h-entry">{{ player.entryName }}</span>
             </div>
             <div class="h2h-points">
@@ -260,7 +291,12 @@
         <ul class="team-members">
           @for (player of team.players; track player.entryId) {
             <li>
-              <span>{{ player.shortName }}</span>
+              <span class="member-name">
+                {{ player.shortName }}
+                @if (getChipShort(player.activeChip); as chip) {
+                  <p-tag [value]="chip" severity="warn" styleClass="active-chip-tag" />
+                }
+              </span>
               <span class="member-scores">
                 <span class="member-gw">{{ player.gwPoints }} GW</span>
                 <strong>{{ player.totalPoints }}</strong>

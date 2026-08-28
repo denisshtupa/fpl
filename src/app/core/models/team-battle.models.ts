@@ -9,6 +9,7 @@ export interface TeamBattlePlayer {
   gwPoints: number;
   totalPoints: number;
   rank: number;
+  activeChip: string | null;
 }
 
 export interface TeamBattleSummary {
@@ -55,6 +56,13 @@ export interface ManagerGwPoint {
   totalPoints: number;
 }
 
+export interface ManagerTransferMove {
+  playerIn: string;
+  playerOut: string;
+  playerInCost: number;
+  playerOutCost: number;
+}
+
 export interface ManagerProfile {
   entryId: number;
   shortName: string;
@@ -71,6 +79,8 @@ export interface ManagerProfile {
   benchPoints: number;
   transferCost: number;
   transfers: number;
+  freeTransfers: number;
+  gwTransfers: ManagerTransferMove[];
   activeChip: string | null;
   activeChipLabel: string | null;
   chips: ManagerChipInfo[];

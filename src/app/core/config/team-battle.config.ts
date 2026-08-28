@@ -15,21 +15,21 @@ export const TEAM_BATTLE_TEAMS: TeamBattleTeam[] = [
   {
     id: 'team-1',
     name: 'Ctrl Alt Defeat',
-    color: '#00ff87',
+    color: '#ef5350',
     members: [
-      { entryId: 4800848, shortName: 'Asbjorn', lineColor: '#00ff87' },
-      { entryId: 2848510, shortName: 'Denis', lineColor: '#34d399' },
-      { entryId: 4695034, shortName: 'Andi', lineColor: '#a7f3d0' },
+      { entryId: 4800848, shortName: 'Asbjorn', lineColor: '#ef5350' },
+      { entryId: 2848510, shortName: 'Denis', lineColor: '#f87171' },
+      { entryId: 4695034, shortName: 'Andi', lineColor: '#fca5a5' },
     ],
   },
   {
     id: 'team-2',
     name: 'Breaking Bench Bad',
-    color: '#b8a9ff',
+    color: '#38bdf8',
     members: [
-      { entryId: 48814, shortName: 'Adnand', lineColor: '#b8a9ff' },
-      { entryId: 410014, shortName: 'Olti', lineColor: '#c084fc' },
-      { entryId: 839542, shortName: 'Albjon', lineColor: '#e9d5ff' },
+      { entryId: 48814, shortName: 'Adnand', lineColor: '#38bdf8' },
+      { entryId: 410014, shortName: 'Olti', lineColor: '#7dd3fc' },
+      { entryId: 839542, shortName: 'Albjon', lineColor: '#bae6fd' },
     ],
   },
 ];

@@ -1,45 +1,22 @@
 <div class="page">
-  <p-toolbar class="page-toolbar">
-    <ng-template #start>
-      <div class="brand">
-        <i class="pi pi-chart-bar brand-icon"></i>
-        <div>
-          <p class="brand-title">FPL League Dashboard</p>
-          <p class="brand-subtitle">Private classic league</p>
-        </div>
-      </div>
-    </ng-template>
-
-    <ng-template #end>
-      <div class="toolbar-actions">
-        <a [href]="leagueUrl" target="_blank" rel="noopener noreferrer">
-          <p-button
-            label="FPL"
-            icon="pi pi-external-link"
-            [outlined]="true"
-            severity="secondary"
-            size="small"
-            styleClass="toolbar-btn"
-          />
-        </a>
-        <p-button
-          label="Refresh"
-          icon="pi pi-refresh"
-          [loading]="loading()"
-          (onClick)="loadData()"
-          severity="contrast"
-          size="small"
-          styleClass="toolbar-btn"
-        />
-      </div>
-    </ng-template>
-  </p-toolbar>
-
   @if (error()) {
-    <p-message severity="error" [text]="error()!" styleClass="page-message" />
-  }
-
-  @if (loading()) {
+    <div class="error-state">
+      <p-message severity="error" styleClass="page-message">
+        <span class="error-text">
+          Unable to load league data. Check your connection and try again.
+          Fantasy Premier League service appears to be down.
+        </span>
+      </p-message>
+      <p-button
+        label="Try again"
+        icon="pi pi-refresh"
+        [loading]="loading()"
+        (onClick)="loadData()"
+        severity="contrast"
+        size="small"
+      />
+    </div>
+  } @else if (loading()) {
     <div class="loading-state">
       <p-progressSpinner strokeWidth="4" ariaLabel="Loading league data" />
       <p>Loading league standings…</p>
@@ -47,11 +24,18 @@
   } @else {
     <p-tabs [(value)]="activeTab" styleClass="dashboard-tabs">
       <p-tablist>
-        <p-tab value="overall">Overall standings</p-tab>
         <p-tab value="teams">Team battle</p-tab>
+        <p-tab value="overall">Overall standings</p-tab>
+        <p-tab value="h2h">H2H league</p-tab>
       </p-tablist>
 
       <p-tabpanels>
+        <p-tabpanel value="teams">
+          <section class="tab-content">
+            <app-team-battle [standings]="standings()" [currentEvent]="currentEvent()" />
+          </section>
+        </p-tabpanel>
+
         <p-tabpanel value="overall">
           <section class="tab-content">
             <section class="summary-grid">
@@ -76,18 +60,30 @@
               </p-card>
             </section>
 
-            @if (topScorer(); as leader) {
+            @if (topThree().length) {
               <p-card styleClass="leader-card">
-                <div class="leader-content">
-                  <div>
-                    <p class="leader-label">Current leader</p>
-                    <h2>{{ leader.entry_name }}</h2>
-                    <p class="leader-manager">{{ leader.player_name }}</p>
-                  </div>
-                  <div class="leader-points">
-                    <span class="leader-total">{{ leader.total }}</span>
-                    <span class="leader-caption">total pts</span>
-                  </div>
+                <p class="leader-label">Top 3</p>
+                <div class="podium-list">
+                  @for (entry of topThree(); track entry.entry) {
+                    <div [class]="'podium-row podium-rank-' + entry.rank">
+                      <div class="podium-identity">
+                        <i [class]="'pi pi-trophy podium-trophy rank-' + entry.rank"></i>
+                        <div class="podium-text">
+                          <strong>{{ entry.entry_name }}</strong>
+                          <span class="podium-subrow">
+                            <span class="podium-manager">{{ entry.player_name }}</span>
+                            @if (getChipShort(entry.entry); as chip) {
+                              <p-tag [value]="chip" severity="warn" styleClass="active-chip-tag" />
+                            }
+                          </span>
+                        </div>
+                      </div>
+                      <div class="podium-points">
+                        <span class="podium-total">{{ entry.total }}</span>
+                        <span class="podium-caption">pts</span>
+                      </div>
+                    </div>
+                  }
                 </div>
               </p-card>
             }
@@ -100,6 +96,7 @@
 
               <p-table
                 [value]="standings()"
+                dataKey="entry"
                 sortField="rank"
                 [sortOrder]="1"
                 styleClass="standings-table p-datatable-sm"
@@ -115,6 +112,7 @@
                       Manager
                       <p-sortIcon field="player_name" />
                     </th>
+                    <th style="width: 3.25rem">Yet</th>
                     <th pSortableColumn="event_total" style="width: 3.5rem">
                       GW
                       <p-sortIcon field="event_total" />
@@ -123,12 +121,15 @@
                       Tot
                       <p-sortIcon field="total" />
                     </th>
-                    <th style="width: 3.5rem">Δ</th>
                   </tr>
                 </ng-template>
 
                 <ng-template #body let-entry>
-                  <tr [ngClass]="{ 'top-row': entry.rank <= 3 }">
+                  <tr
+                    class="standing-row"
+                    [class.top-row]="entry.rank <= 3"
+                    (click)="openStandingDetail(entry)"
+                  >
                     <td>
                       <span class="rank-cell">
                         @if (getRankIcon(entry.rank)) {
@@ -144,7 +145,12 @@
                         }
                         <div class="team-cell-text">
                           <span class="team-name">{{ entry.entry_name }}</span>
-                          <span class="manager-name manager-name-inline">{{ entry.player_name }}</span>
+                          <div class="team-subrow">
+                            <span class="manager-name manager-name-inline">{{ entry.player_name }}</span>
+                            @if (getChipShort(entry.entry); as chip) {
+                              <p-tag [value]="chip" severity="warn" styleClass="active-chip-tag" />
+                            }
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -152,31 +158,159 @@
                       <span class="manager-name">{{ entry.player_name }}</span>
                     </td>
                     <td>
+                      <span class="points-chip yet">
+                        {{ getPlayersLeft(entry.entry) ?? '—' }}
+                      </span>
+                    </td>
+                    <td>
                       <span class="points-chip gw">{{ entry.event_total }}</span>
                     </td>
                     <td>
                       <span class="points-chip total">{{ entry.total }}</span>
                     </td>
-                    <td>
-                      <p-tag
-                        [value]="getRankChangeLabel(getRankChange(entry))"
-                        [severity]="getRankChangeSeverity(getRankChange(entry))"
-                        styleClass="change-tag"
-                      />
-                    </td>
                   </tr>
                 </ng-template>
               </p-table>
             </p-card>
+
+            <p-dialog
+              [header]="selectedStanding()?.entry_name ?? 'Manager details'"
+              [visible]="detailVisible()"
+              (visibleChange)="onDetailVisibleChange($event)"
+              [modal]="true"
+              [dismissableMask]="true"
+              [draggable]="false"
+              [resizable]="false"
+              [style]="{ width: 'min(28rem, 94vw)' }"
+              styleClass="standing-detail-dialog"
+            >
+              @if (selectedStanding(); as selected) {
+                <p class="standing-detail-manager">{{ selected.player_name }}</p>
+
+                @if (isRowDetailLoading(selected.entry)) {
+                  <div class="standing-detail-loading">
+                    <p-progressSpinner strokeWidth="4" [style]="{ width: '2rem', height: '2rem' }" />
+                    <span>Loading manager details…</span>
+                  </div>
+                } @else if (getRowDetailError(selected.entry); as detailError) {
+                  <p class="standing-detail-error">{{ detailError }}</p>
+                } @else if (getRowDetail(selected.entry); as detail) {
+                  <div class="standing-detail-grid">
+                    <div class="standing-detail-item">
+                      <span class="standing-detail-label">Rank change</span>
+                      <p-tag
+                        [value]="getRankChangeLabel(getRankChange(selected))"
+                        [severity]="getRankChangeSeverity(getRankChange(selected))"
+                        styleClass="change-tag"
+                      />
+                    </div>
+                    <div class="standing-detail-item">
+                      <span class="standing-detail-label">Team value</span>
+                      <strong>{{ formatValue(detail.teamValue) }}</strong>
+                    </div>
+                    <div class="standing-detail-item">
+                      <span class="standing-detail-label">In the bank</span>
+                      <strong>{{ formatValue(detail.bank) }}</strong>
+                    </div>
+                    <div class="standing-detail-item">
+                      <span class="standing-detail-label">GW hits</span>
+                      <strong>{{ detail.transferCost ? '-' + detail.transferCost : '0' }}</strong>
+                    </div>
+                    <div class="standing-detail-item">
+                      <span class="standing-detail-label">Players</span>
+                      <strong>{{ detail.playersPlayed }}/{{ getPlayersTotal(detail) }}</strong>
+                    </div>
+                    <div class="standing-detail-item">
+                      <span class="standing-detail-label">Transfers this GW</span>
+                      <strong>{{ detail.transfers }}</strong>
+                    </div>
+                    <div class="standing-detail-item">
+                      <span class="standing-detail-label">Free transfers left</span>
+                      <strong>{{ detail.freeTransfers }}</strong>
+                    </div>
+                  </div>
+
+                  <div class="standing-transfers">
+                    <span class="standing-detail-label">Transfer moves</span>
+                    @if (detail.gwTransfers.length) {
+                      <ul class="transfer-move-list">
+                        @for (move of detail.gwTransfers; track move.playerOut + move.playerIn) {
+                          <li class="transfer-move">
+                            <span class="transfer-out">{{ move.playerOut }}</span>
+                            <i class="pi pi-arrow-right transfer-arrow"></i>
+                            <span class="transfer-in">{{ move.playerIn }}</span>
+                          </li>
+                        }
+                      </ul>
+                    } @else {
+                      <span class="standing-chip-empty">No transfers this GW</span>
+                    }
+                  </div>
+
+                  <div class="standing-detail-chips">
+                    <div class="standing-chip-block">
+                      <span class="standing-detail-label">Active chip</span>
+                      @if (detail.activeChipLabel) {
+                        <p-tag [value]="detail.activeChipLabel" severity="warn" />
+                      } @else {
+                        <span class="standing-chip-empty">None</span>
+                      }
+                    </div>
+
+                    <div class="standing-chip-block">
+                      <span class="standing-detail-label">
+                        Chips {{ detail.chipsUsedCount }}/{{ detail.chips.length }} used
+                      </span>
+                      <div class="standing-chip-tags">
+                        @for (chip of detail.chips; track chip.key) {
+                          <p-tag
+                            [value]="chip.used ? chip.label + ' (GW' + chip.event + ')' : chip.label"
+                            [severity]="chip.used ? 'secondary' : 'success'"
+                            [styleClass]="chip.used ? 'chip-used' : 'chip-available'"
+                          />
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+              }
+            </p-dialog>
           </section>
         </p-tabpanel>
 
-        <p-tabpanel value="teams">
+        <p-tabpanel value="h2h">
           <section class="tab-content">
-            <app-team-battle [standings]="standings()" [currentEvent]="currentEvent()" />
+            <app-h2h-league [currentEvent]="currentEvent()" />
           </section>
         </p-tabpanel>
       </p-tabpanels>
     </p-tabs>
+
+    <p-toolbar class="page-toolbar">
+      <ng-template #start>
+        <div class="brand">
+          <i class="pi pi-chart-bar brand-icon"></i>
+          <div>
+            <p class="brand-title">FPL League Dashboard</p>
+            <p class="brand-subtitle">Private classic league</p>
+          </div>
+        </div>
+      </ng-template>
+
+      <ng-template #end>
+        <div class="toolbar-actions">
+          <a [href]="leagueUrl" target="_blank" rel="noopener noreferrer">
+            <p-button
+              label="FPL"
+              icon="pi pi-external-link"
+              [outlined]="true"
+              severity="secondary"
+              size="small"
+              styleClass="toolbar-btn"
+            />
+          </a>
+        </div>
+      </ng-template>
+    </p-toolbar>
   }
 </div>

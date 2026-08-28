@@ -1,0 +1,198 @@
+<section class="h2h-league">
+  @if (error() && !standings().length) {
+    <p-message severity="warn" [text]="error()!" styleClass="h2h-message" />
+  } @else if (loading()) {
+    <div class="h2h-loading">
+      <p-progressSpinner strokeWidth="4" ariaLabel="Loading H2H league" />
+      <p>Loading H2H league…</p>
+    </div>
+  } @else {
+    <section class="h2h-summary">
+      <div>
+        <p class="h2h-kicker">Head-to-head</p>
+        <h2 class="h2h-title">{{ leagueName() }}</h2>
+      </div>
+      <a class="h2h-link" [href]="leagueUrl" target="_blank" rel="noopener noreferrer">
+        Open on FPL
+        <i class="pi pi-external-link"></i>
+      </a>
+    </section>
+
+    @if (topThree().length) {
+      <p-card styleClass="h2h-card leader-card">
+        <p class="leader-label">Top 3</p>
+        <div class="podium-list">
+          @for (entry of topThree(); track entry.entry) {
+            <div [class]="'podium-row podium-rank-' + entry.rank">
+              <div class="podium-identity">
+                <i [class]="'pi pi-trophy podium-trophy rank-' + entry.rank"></i>
+                <div class="podium-text">
+                  <strong>{{ entry.entry_name }}</strong>
+                  <span class="podium-subrow">
+                    <span class="podium-manager">{{ entry.player_name }}</span>
+                    <span class="podium-record">
+                      {{ entry.matches_won }}W {{ entry.matches_drawn }}D {{ entry.matches_lost }}L
+                    </span>
+                  </span>
+                </div>
+              </div>
+              <div class="podium-points">
+                <span class="podium-total">{{ entry.total }}</span>
+                <span class="podium-caption">pts</span>
+              </div>
+            </div>
+          }
+        </div>
+      </p-card>
+    }
+
+    <p-card styleClass="h2h-card">
+      <ng-template #title>Gameweek fixtures</ng-template>
+      <ng-template #subtitle>Pick a gameweek to see every H2H matchup</ng-template>
+
+      <div class="gw-picker">
+        <label for="h2h-gw">Gameweek</label>
+        <p-select
+          inputId="h2h-gw"
+          [options]="gwOptions()"
+          optionLabel="label"
+          optionValue="id"
+          [ngModel]="selectedEventId()"
+          (ngModelChange)="selectedEventId.set($event)"
+          placeholder="Select GW"
+          styleClass="gw-select"
+        />
+      </div>
+
+      @if (matchesLoading()) {
+        <div class="h2h-loading compact">
+          <p-progressSpinner strokeWidth="4" [style]="{ width: '2rem', height: '2rem' }" />
+          <span>Loading {{ selectedGwLabel() }} matches…</span>
+        </div>
+      } @else if (!matches().length) {
+        <p class="h2h-empty">No matches found for {{ selectedGwLabel() }}.</p>
+      } @else {
+        <div class="match-list">
+          @for (match of matches(); track match.id) {
+            @let result = matchResult(match);
+            <div
+              class="match-card"
+              [class.match-bye]="result === 'bye'"
+            >
+              <div
+                class="match-side"
+                [class.winner]="result === '1'"
+                [class.loser]="result === '2'"
+                [class.winner-bg]="isCurrentGwSelected() && result === '1'"
+              >
+                <div class="match-names">
+                  <strong>{{ match.entry_1_name }}</strong>
+                  <span>{{ match.entry_1_player_name }}</span>
+                </div>
+              </div>
+
+              <div class="match-center">
+                <span class="match-points" [class.winner]="result === '1'">{{ match.entry_1_points }}</span>
+                <div class="match-vs">
+                  @if (result === 'draw') {
+                    <p-tag value="DRAW" severity="secondary" styleClass="match-tag" />
+                  } @else if (result === 'bye') {
+                    <p-tag value="BYE" severity="secondary" styleClass="match-tag" />
+                  } @else {
+                    <span>vs</span>
+                  }
+                </div>
+                <span class="match-points" [class.winner]="result === '2'">
+                  {{ opponentPoints(match) }}
+                </span>
+              </div>
+
+              <div
+                class="match-side match-side-right"
+                [class.winner]="result === '2'"
+                [class.loser]="result === '1'"
+                [class.winner-bg]="isCurrentGwSelected() && result === '2'"
+              >
+                @let opponent = opponentLabel(match);
+                <div class="match-names">
+                  <strong>{{ opponent.name }}</strong>
+                  <span>{{ opponent.manager }}</span>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </p-card>
+
+    <p-card styleClass="h2h-card table-card">
+      <ng-template #title>H2H standings</ng-template>
+      <ng-template #subtitle>League points from head-to-head results</ng-template>
+
+      <p-table
+        [value]="standings()"
+        sortField="rank"
+        [sortOrder]="1"
+        styleClass="h2h-standings-table p-datatable-sm"
+      >
+        <ng-template #header>
+          <tr>
+            <th pSortableColumn="rank" class="col-rank">
+              #
+              <p-sortIcon field="rank" />
+            </th>
+            <th class="col-team">Team</th>
+            <th pSortableColumn="player_name" class="manager-col">
+              Manager
+              <p-sortIcon field="player_name" />
+            </th>
+            <th class="col-stat">P</th>
+            <th class="col-stat">W</th>
+            <th class="col-stat">D</th>
+            <th class="col-stat">L</th>
+            <th pSortableColumn="points_for" class="col-pts">
+              PF
+              <p-sortIcon field="points_for" />
+            </th>
+            <th pSortableColumn="total" class="col-pts">
+              Pts
+              <p-sortIcon field="total" />
+            </th>
+          </tr>
+        </ng-template>
+
+        <ng-template #body let-entry>
+          <tr [ngClass]="{ 'top-row': entry.rank <= 3 }">
+            <td class="col-rank">
+              <span class="rank-cell">
+                @if (getRankIcon(entry.rank)) {
+                  <i [class]="getRankIcon(entry.rank)" [ngClass]="'rank-icon rank-' + entry.rank"></i>
+                }
+                {{ entry.rank }}
+              </span>
+            </td>
+            <td class="col-team">
+              <div class="team-cell-text">
+                <span class="team-name">{{ entry.entry_name }}</span>
+                <span class="manager-name manager-name-inline">{{ entry.player_name }}</span>
+              </div>
+            </td>
+            <td class="manager-col">
+              <span class="manager-name">{{ entry.player_name }}</span>
+            </td>
+            <td class="col-stat">{{ entry.matches_played }}</td>
+            <td class="col-stat">{{ entry.matches_won }}</td>
+            <td class="col-stat">{{ entry.matches_drawn }}</td>
+            <td class="col-stat">{{ entry.matches_lost }}</td>
+            <td class="col-pts">
+              <span class="points-chip gw">{{ entry.points_for }}</span>
+            </td>
+            <td class="col-pts">
+              <span class="points-chip total">{{ entry.total }}</span>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </p-card>
+  }
+</section>
