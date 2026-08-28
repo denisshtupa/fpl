@@ -1,4 +1,58 @@
 <section class="team-battle">
+  <p-card styleClass="winner-card">
+    <div class="winner-content">
+      @if (isTie()) {
+        <div>
+          <p class="winner-label">Result</p>
+          <h2>It's a tie!</h2>
+          <p class="winner-detail">Both teams are level on {{ teams()[0]?.totalPoints }} points.</p>
+        </div>
+      } @else if (winner(); as leadingTeam) {
+        <div>
+          <p class="winner-label">Leading team</p>
+          <h2 [style.color]="leadingTeam.color">{{ leadingTeam.name }}</h2>
+          <p class="winner-detail">
+            {{ leadingTeam.totalPoints }} pts · +{{ margin() }} ahead
+          </p>
+        </div>
+        <div class="winner-trophy">
+          <i class="pi pi-trophy"></i>
+        </div>
+      }
+    </div>
+
+    @if (playersLeftByTeam().length) {
+      <div class="players-left-section">
+        <p class="players-left-title">Players still to play in GW {{ currentEvent()?.id ?? '—' }}</p>
+        <div class="players-left-teams">
+          @for (team of playersLeftByTeam(); track team.id) {
+            <div class="players-left-team-group">
+              <div class="players-left-team-header" [style.borderColor]="team.color">
+                <strong [style.color]="team.color">{{ team.name }}</strong>
+                <span class="players-left-team-total" [class.all-done]="team.totalLeft === 0">
+                  {{ team.totalLeft }} left
+                </span>
+              </div>
+              <div class="players-left-grid">
+                @for (item of team.members; track item.entryId) {
+                  <div class="players-left-item" [style.borderColor]="team.color">
+                    <div class="players-left-manager">
+                      <strong>{{ item.shortName }}</strong>
+                    </div>
+                    <div class="players-left-count" [class.all-done]="item.playersLeftToPlay === 0">
+                      <span class="players-left-number">{{ item.playersLeftToPlay }}</span>
+                      <span class="players-left-label">left</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </p-card>
+
   <p-card styleClass="details-card">
     <ng-template #title>Managers profiles</ng-template>
     <ng-template #subtitle>Squads, chips, team value and live player points for {{ currentEvent()?.name ?? 'current GW' }}</ng-template>
@@ -187,106 +241,15 @@
     }
   </p-card>
 
-  <p-card styleClass="table-card">
-    <ng-template #title>Head-to-head breakdown</ng-template>
-
-    <div class="h2h-list">
-      @for (player of players(); track player.entryId) {
-        <div class="h2h-card" [style.borderColor]="player.teamColor">
-          <div class="h2h-main">
-            <div>
-              <strong>
-                {{ player.shortName }}
-                @if (getChipShort(player.activeChip); as chip) {
-                  <p-tag [value]="chip" severity="warn" styleClass="active-chip-tag" />
-                }
-              </strong>
-              <span class="h2h-entry">{{ player.entryName }}</span>
-            </div>
-            <div class="h2h-points">
-              <span class="h2h-total">{{ player.totalPoints }}</span>
-              <span class="h2h-gw">GW {{ player.gwPoints }}</span>
-            </div>
-          </div>
-          <p-tag
-            [value]="player.teamName"
-            [style]="{ background: player.teamColor, color: '#0f1117' }"
-            styleClass="h2h-team-tag"
-          />
-        </div>
-      }
-    </div>
-
-    <div class="h2h-team-totals">
-      @for (team of teams(); track team.id) {
-        <div class="h2h-team-total" [style.borderColor]="team.color">
-          <strong [style.color]="team.color">{{ team.name }}</strong>
-          <span>{{ team.gwPoints }} GW · <strong>{{ team.totalPoints }}</strong> tot</span>
-        </div>
-      }
-    </div>
-  </p-card>
-  
-  <p-card styleClass="winner-card">
-    <div class="winner-content">
-      @if (isTie()) {
-        <div>
-          <p class="winner-label">Result</p>
-          <h2>It's a tie!</h2>
-          <p class="winner-detail">Both teams are level on {{ teams()[0]?.totalPoints }} points.</p>
-        </div>
-      } @else if (winner(); as leadingTeam) {
-        <div>
-          <p class="winner-label">Leading team</p>
-          <h2 [style.color]="leadingTeam.color">{{ leadingTeam.name }}</h2>
-          <p class="winner-detail">
-            {{ leadingTeam.totalPoints }} pts · +{{ margin() }} ahead
-          </p>
-        </div>  
-        <div class="winner-trophy">
-          <i class="pi pi-trophy"></i>
-        </div>
-      }
-    </div>
-
-    @if (playersLeftByTeam().length) {
-      <div class="players-left-section">
-        <p class="players-left-title">Players still to play in GW {{ currentEvent()?.id ?? '—' }}</p>
-        <div class="players-left-teams">
-          @for (team of playersLeftByTeam(); track team.id) {
-            <div class="players-left-team-group">
-              <div class="players-left-team-header" [style.borderColor]="team.color">
-                <strong [style.color]="team.color">{{ team.name }}</strong>
-                <span class="players-left-team-total" [class.all-done]="team.totalLeft === 0">
-                  {{ team.totalLeft }} left
-                </span>
-              </div>
-              <div class="players-left-grid">
-                @for (item of team.members; track item.entryId) {
-                  <div class="players-left-item" [style.borderColor]="team.color">
-                    <div class="players-left-manager">
-                      <strong>{{ item.shortName }}</strong>
-                    </div>
-                    <div class="players-left-count" [class.all-done]="item.playersLeftToPlay === 0">
-                      <span class="players-left-number">{{ item.playersLeftToPlay }}</span>
-                      <span class="players-left-label">left</span>
-                    </div>
-                  </div>
-                }
-              </div>
-            </div>
-          }
-        </div>
-      </div>
-    }
-  </p-card>
-
   <div class="team-scoreboard">
     @for (team of teams(); track team.id) {
       <p-card [styleClass]="'team-card team-card-' + team.id">
         <div class="team-card-header" [style.borderColor]="team.color">
           <h3 [style.color]="team.color">{{ team.name }}</h3>
-          <span class="team-total">{{ team.totalPoints }} pts</span>
+          <div class="team-totals">
+            <span class="team-gw">{{ team.gwPoints }} pts</span>
+            <span class="team-total">{{ team.totalPoints }} pts</span>
+          </div>
         </div>
         <ul class="team-members">
           @for (player of team.players; track player.entryId) {
@@ -298,8 +261,8 @@
                 }
               </span>
               <span class="member-scores">
-                <span class="member-gw">{{ player.gwPoints }} GW</span>
-                <strong>{{ player.totalPoints }}</strong>
+                <span class="member-gw">{{ player.gwPoints }} pts</span>
+                <strong class="member-total">{{ player.totalPoints }} pts</strong>
               </span>
             </li>
           }

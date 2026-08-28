@@ -10,7 +10,6 @@ import { RouterOutlet } from '@angular/router';
       display: block;
       min-height: 100vh;
       max-width: 100%;
-      overflow-x: clip;
     }
   `,
 })

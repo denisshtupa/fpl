@@ -2,7 +2,6 @@
   display: block;
   max-width: 100%;
   min-width: 0;
-  overflow-x: clip;
 }
 
 .page {
@@ -15,7 +14,6 @@
   flex-direction: column;
   gap: 0.75rem;
   font-size: 0.8125rem;
-  overflow-x: clip;
 }
 
 .page-toolbar {
@@ -113,12 +111,25 @@
 :host ::ng-deep .dashboard-tabs {
   max-width: 100%;
   min-width: 0;
+  overflow: visible;
 }
 
 :host ::ng-deep .dashboard-tabs .p-tablist {
+  position: sticky;
+  top: 0;
+  z-index: 200;
   font-size: 0.8125rem;
   flex-wrap: wrap;
   max-width: 100%;
+  padding: 0.35rem 0.75rem 0.55rem;
+  margin: -0.75rem -0.75rem 0.25rem;
+  width: calc(100% + 1.5rem);
+  box-sizing: border-box;
+  background: rgba(15, 17, 23, 0.96);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
 }
 
 :host ::ng-deep .dashboard-tabs .p-tabpanels,
@@ -614,6 +625,15 @@
     font-size: 0.875rem;
   }
 
+  :host ::ng-deep .dashboard-tabs .p-tablist {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    margin-left: -1rem;
+    margin-right: -1rem;
+    margin-top: -1rem;
+    width: calc(100% + 2rem);
+  }
+
   .manager-name-inline {
     display: none;
   }
@@ -674,6 +694,15 @@
 @media (min-width: 900px) {
   .page {
     padding: 1.25rem;
+  }
+
+  :host ::ng-deep .dashboard-tabs .p-tablist {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+    margin-left: -1.25rem;
+    margin-right: -1.25rem;
+    margin-top: -1.25rem;
+    width: calc(100% + 2.5rem);
   }
 
   .brand-title {

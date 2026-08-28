@@ -57,6 +57,7 @@ export class LeagueStandingsComponent {
   protected readonly playersLeftByEntry = signal<Record<number, number>>({});
   protected readonly selectedEntryId = signal<number | null>(null);
   protected readonly detailVisible = signal(false);
+  private didInitialScrollReset = false;
 
   protected readonly topThree = computed(() => this.standings().slice(0, 3));
   protected readonly selectedStanding = computed(() => {
@@ -78,6 +79,7 @@ export class LeagueStandingsComponent {
   });
 
   constructor() {
+    this.scrollToTop();
     this.loadData();
   }
 
@@ -103,6 +105,7 @@ export class LeagueStandingsComponent {
         // Clone so Team battle's effect re-runs even if bootstrap returns the same event object.
         this.currentEvent.set(currentEvent ? { ...currentEvent } : undefined);
         this.loading.set(false);
+        this.scrollToTopAfterPaint();
 
         if (currentEvent?.id) {
           this.loadStandingExtras(
@@ -116,6 +119,7 @@ export class LeagueStandingsComponent {
           'Unable to load league data. Check your connection and try again. Fantasy Premier League service appears to be down.',
         );
         this.loading.set(false);
+        this.scrollToTopAfterPaint();
       },
     });
   }
@@ -257,6 +261,24 @@ export class LeagueStandingsComponent {
         }));
         this.rowDetailLoading.update((loading) => ({ ...loading, [entryId]: false }));
       },
+    });
+  }
+
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }
+
+  private scrollToTopAfterPaint(): void {
+    if (this.didInitialScrollReset) {
+      return;
+    }
+
+    this.didInitialScrollReset = true;
+    requestAnimationFrame(() => {
+      this.scrollToTop();
+      // Team battle content loads after standings; keep top once layout settles.
+      setTimeout(() => this.scrollToTop(), 0);
+      setTimeout(() => this.scrollToTop(), 150);
     });
   }
 }

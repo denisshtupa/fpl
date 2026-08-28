@@ -188,9 +188,24 @@
   font-size: 0.875rem;
   overflow-wrap: anywhere;
 }
+
+.team-totals {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  flex-shrink: 0;
+}
+
+.team-gw {
+  font-size: 0.8125rem;
+  color: #00ff87;
+  font-weight: 700;
+}
+
 .team-total {
   font-size: 1.125rem;
   font-weight: 800;
+  line-height: 1.1;
 }
 
 .team-members {
@@ -215,7 +230,22 @@
 .member-scores {
   display: inline-flex;
   align-items: baseline;
-  gap: 0.5rem;
+  gap: 0.65rem;
+  flex-shrink: 0;
+}
+
+.member-gw {
+  font-size: 0.75rem;
+  color: #00ff87;
+  font-weight: 600;
+}
+
+.member-total {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  min-width: 3rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .member-name {
@@ -229,11 +259,6 @@
   font-size: 0.5625rem;
   padding: 0.1rem 0.3rem;
   flex-shrink: 0;
-}
-
-.member-gw {
-  font-size: 0.6875rem;
-  color: var(--p-text-muted-color);
 }
 
 .charts-grid {
@@ -271,102 +296,6 @@
 :host ::ng-deep .table-card .p-card-body,
 :host ::ng-deep .details-card .p-card-body {
   padding-top: 0;
-}
-
-.h2h-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  margin-bottom: 0.75rem;
-}
-
-.h2h-card {
-  border-left: 3px solid;
-  border-radius: 0.625rem;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 0.55rem 0.65rem;
-}
-
-.h2h-main {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.35rem;
-  min-width: 0;
-}
-
-.h2h-main > div:first-child {
-  min-width: 0;
-  overflow: hidden;
-}
-
-.h2h-entry {
-  display: block;
-  font-size: 0.625rem;
-  color: var(--p-text-muted-color);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.h2h-points {
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.h2h-total {
-  display: block;
-  font-size: 1rem;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.h2h-gw {
-  font-size: 0.625rem;
-  color: var(--p-text-muted-color);
-}
-
-:host ::ng-deep .h2h-team-tag {
-  font-size: 0.625rem;
-  max-width: 100%;
-  display: inline-flex;
-}
-
-:host ::ng-deep .h2h-team-tag .p-tag-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
-}
-
-.h2h-team-totals {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.h2h-team-total {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.5rem 0.65rem;
-  border-left: 3px solid;
-  border-radius: 0.625rem;
-  background: rgba(255, 255, 255, 0.03);
-  font-size: 0.75rem;
-  min-width: 0;
-}
-
-.h2h-team-total strong:first-child {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.h2h-team-total span:last-child {
-  flex-shrink: 0;
-  text-align: right;
 }
 
 .details-message {

@@ -34,6 +34,7 @@ export class TeamBattleComponent {
   protected readonly detailsLoading = signal(false);
   protected readonly detailsError = signal<string | null>(null);
   protected readonly managerProfiles = signal<ManagerProfile[]>([]);
+  private hasLoadedProfilesOnce = false;
 
   /** Prefer live league standings totals so Team battle matches Overall during an active GW. */
   protected readonly liveManagerProfiles = computed(() => {
@@ -61,9 +62,6 @@ export class TeamBattleComponent {
   });
 
   protected readonly teams = computed(() => this.buildTeams());
-  protected readonly players = computed(() =>
-    this.teams().flatMap((team) => team.players).sort((a, b) => b.totalPoints - a.totalPoints),
-  );
   protected readonly profilesByTeam = computed(() => {
     const profiles = this.liveManagerProfiles();
 
@@ -71,7 +69,7 @@ export class TeamBattleComponent {
       ...team,
       profiles: profiles
         .filter((profile) => profile.teamId === team.id)
-        .sort((a, b) => a.shortName.localeCompare(b.shortName)),
+        .sort((a, b) => b.gwPoints - a.gwPoints || a.shortName.localeCompare(b.shortName)),
     }));
   });
   protected readonly winner = computed(() => {
@@ -266,6 +264,11 @@ export class TeamBattleComponent {
       next: (profiles) => {
         this.managerProfiles.set(profiles);
         this.detailsLoading.set(false);
+        if (!this.hasLoadedProfilesOnce) {
+          this.hasLoadedProfilesOnce = true;
+          // Keep viewport at top after profiles expand the page on refresh.
+          requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' }));
+        }
       },
       error: () => {
         this.detailsError.set('Unable to load manager squads and chip data.');
@@ -279,25 +282,27 @@ export class TeamBattleComponent {
     const profilesByEntry = new Map(this.liveManagerProfiles().map((profile) => [profile.entryId, profile]));
 
     return TEAM_BATTLE_TEAMS.map((team) => {
-      const players = team.members.map((member) => {
-        const standing = standingsByEntry.get(member.entryId);
-        const profile = profilesByEntry.get(member.entryId);
+      const players = team.members
+        .map((member) => {
+          const standing = standingsByEntry.get(member.entryId);
+          const profile = profilesByEntry.get(member.entryId);
 
-        return {
-          entryId: member.entryId,
-          shortName: member.shortName,
-          teamId: team.id,
-          teamName: team.name,
-          teamColor: team.color,
-          entryName: profile?.entryName ?? standing?.entry_name ?? member.shortName,
-          playerName: profile?.playerName ?? standing?.player_name ?? '—',
-          // Standings are the live source during an active GW (same as Overall).
-          gwPoints: standing?.event_total ?? profile?.gwPoints ?? 0,
-          totalPoints: standing?.total ?? profile?.totalPoints ?? 0,
-          rank: standing?.rank ?? 0,
-          activeChip: profile?.activeChip ?? null,
-        } satisfies TeamBattlePlayer;
-      });
+          return {
+            entryId: member.entryId,
+            shortName: member.shortName,
+            teamId: team.id,
+            teamName: team.name,
+            teamColor: team.color,
+            entryName: profile?.entryName ?? standing?.entry_name ?? member.shortName,
+            playerName: profile?.playerName ?? standing?.player_name ?? '—',
+            // Standings are the live source during an active GW (same as Overall).
+            gwPoints: standing?.event_total ?? profile?.gwPoints ?? 0,
+            totalPoints: standing?.total ?? profile?.totalPoints ?? 0,
+            rank: standing?.rank ?? 0,
+            activeChip: profile?.activeChip ?? null,
+          } satisfies TeamBattlePlayer;
+        })
+        .sort((a, b) => b.totalPoints - a.totalPoints || b.gwPoints - a.gwPoints);
 
       return {
         id: team.id,
