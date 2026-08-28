@@ -43,7 +43,19 @@ League settings live in `src/environments/environment.ts`:
 npm run build
 ```
 
-Production builds call the FPL API directly. If you deploy to a static host, you may need a server-side proxy because the FPL API blocks browser CORS requests.
+Production builds call the FPL API through the Netlify `/api/*` proxy (see `netlify.toml`).
+
+## Deploy
+
+Linked Netlify site: [fpl-3i-league.netlify.app](https://fpl-3i-league.netlify.app)
+
+From `main` (requires Netlify CLI login):
+
+```bash
+npm run deploy
+```
+
+This checks out `main`, pulls the latest, builds, and deploys to production.
 
 ## API endpoints used
 
