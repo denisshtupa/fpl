@@ -58,6 +58,16 @@ export interface FplEntryHistoryResponse {
   chips: FplEntryHistoryChip[];
 }
 
+export interface FplTransfer {
+  element_in: number;
+  element_in_cost: number;
+  element_out: number;
+  element_out_cost: number;
+  entry: number;
+  event: number;
+  time: string;
+}
+
 export interface FplPick {
   element: number;
   position: number;
@@ -148,6 +158,13 @@ export const FPL_CHIP_LABELS: Record<string, string> = {
   bboost: 'Bench Boost',
   '3xc': 'Triple Captain',
   freehit: 'Free Hit',
+};
+
+export const FPL_CHIP_SHORT: Record<string, string> = {
+  wildcard: 'WC',
+  bboost: 'BB',
+  '3xc': 'TC',
+  freehit: 'FH',
 };
 
 export const ALL_FPL_CHIPS = ['wildcard', 'bboost', '3xc', 'freehit'] as const;

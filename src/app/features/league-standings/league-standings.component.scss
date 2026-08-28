@@ -32,12 +32,12 @@
   gap: 0.5rem;
   padding: 0.625rem 0.75rem;
   max-width: 100%;
+  justify-content: space-between;
 }
 
 :host ::ng-deep .page-toolbar .p-toolbar-group-start,
 :host ::ng-deep .page-toolbar .p-toolbar-group-end {
   min-width: 0;
-  flex: 1 1 auto;
 }
 
 :host ::ng-deep .page-toolbar .p-toolbar-group-end {
@@ -79,6 +79,24 @@
 
 .page-message {
   width: 100%;
+}
+
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  min-height: 60vh;
+  padding: 1.5rem 0.75rem;
+  text-align: center;
+}
+
+.error-text {
+  display: block;
+  line-height: 1.5;
+  max-width: 28rem;
+  margin: 0 auto;
 }
 
 .loading-state {
@@ -163,47 +181,126 @@
   padding: 0.875rem 1rem;
 }
 
-.leader-content {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.75rem;
-}
-
 .leader-label {
-  margin: 0;
+  margin: 0 0 0.75rem;
   color: #00ff87;
   font-size: 0.625rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
 
-.leader-content h2 {
-  margin: 0.25rem 0 0;
-  font-size: 1.125rem;
+.podium-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.podium-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.625rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.podium-rank-1 {
+  border-color: rgba(255, 215, 0, 0.35);
+  background: rgba(255, 215, 0, 0.08);
+}
+
+.podium-rank-2 {
+  border-color: rgba(192, 192, 192, 0.3);
+  background: rgba(192, 192, 192, 0.06);
+}
+
+.podium-rank-3 {
+  border-color: rgba(205, 127, 50, 0.3);
+  background: rgba(205, 127, 50, 0.06);
+}
+
+.podium-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+.podium-trophy {
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.podium-trophy.rank-1 {
+  font-size: 1.5rem;
+  color: #ffd700;
+}
+
+.podium-trophy.rank-2 {
+  font-size: 1.2rem;
+  color: #c0c0c0;
+}
+
+.podium-trophy.rank-3 {
+  font-size: 0.95rem;
+  color: #cd7f32;
+}
+
+.podium-text {
+  min-width: 0;
+}
+
+.podium-text strong {
+  display: block;
+  font-size: 0.9375rem;
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
 
-.leader-manager {
-  margin: 0.2rem 0 0;
+.podium-subrow {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.15rem;
+  min-width: 0;
+}
+
+.podium-manager {
   color: var(--p-text-muted-color);
   font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
-.leader-points {
-  text-align: left;
+.podium-points {
+  text-align: right;
+  flex-shrink: 0;
 }
 
-.leader-total {
+.podium-total {
   display: block;
-  font-size: 1.75rem;
+  font-size: 1.25rem;
   font-weight: 800;
   line-height: 1;
-  color: #00ff87;
 }
 
-.leader-caption {
+.podium-rank-1 .podium-total {
+  color: #ffd700;
+}
+
+.podium-rank-2 .podium-total {
+  color: #c0c0c0;
+}
+
+.podium-rank-3 .podium-total {
+  color: #cd7f32;
+}
+
+.podium-caption {
   color: var(--p-text-muted-color);
   font-size: 0.6875rem;
 }
@@ -251,12 +348,18 @@
 }
 
 .rank-icon.rank-1 {
+  font-size: 0.95rem;
   color: #ffd700;
 }
 
-.rank-icon.rank-2,
-.rank-icon.rank-3 {
+.rank-icon.rank-2 {
+  font-size: 0.8rem;
   color: #c0c0c0;
+}
+
+.rank-icon.rank-3 {
+  font-size: 0.7rem;
+  color: #cd7f32;
 }
 
 .team-cell {
@@ -288,11 +391,38 @@
   max-width: 100%;
 }
 
+.team-subrow {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  margin-top: 0.1rem;
+}
+
+.team-subrow .manager-name-inline {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+:host ::ng-deep .active-chip-tag {
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  padding: 0.15rem 0.4rem;
+  flex-shrink: 0;
+}
+
 .manager-name-inline {
   display: block;
   font-size: 0.625rem;
   color: var(--p-text-muted-color);
   font-weight: 400;
+}
+
+@media (min-width: 640px) {
+  .team-subrow {
+    margin-top: 0.25rem;
+  }
 }
 
 .manager-col {
@@ -329,6 +459,154 @@
   background: rgba(0, 255, 135, 0.04);
 }
 
+:host ::ng-deep .expand-btn.p-button {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+}
+
+:host ::ng-deep .standing-row {
+  cursor: pointer;
+}
+
+:host ::ng-deep .standing-row:hover > td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.standing-detail {
+  padding: 0.75rem 0.5rem 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.standing-detail-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--p-text-muted-color);
+  font-size: 0.75rem;
+}
+
+.standing-detail-error {
+  margin: 0;
+  color: #f87171;
+  font-size: 0.75rem;
+}
+
+.standing-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.standing-detail-item {
+  padding: 0.5rem 0.625rem;
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.standing-detail-label {
+  display: block;
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--p-text-muted-color);
+  margin-bottom: 0.2rem;
+}
+
+.standing-detail-item strong {
+  font-size: 0.8125rem;
+}
+
+.standing-detail-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.standing-transfers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.transfer-move-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.transfer-move {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.8125rem;
+}
+
+.transfer-out {
+  color: #f87171;
+  font-weight: 700;
+}
+
+.transfer-in {
+  color: #4ade80;
+  font-weight: 700;
+}
+
+.transfer-arrow {
+  font-size: 0.7rem;
+  color: var(--p-text-muted-color);
+}
+
+.standing-chip-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.standing-chip-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.standing-chip-empty {
+  color: var(--p-text-muted-color);
+  font-size: 0.75rem;
+}
+
+:host ::ng-deep .chip-used {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+@media (min-width: 640px) {
+  .standing-detail-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .standing-chip-block {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .standing-chip-block .standing-detail-label {
+    margin-bottom: 0;
+    min-width: 7rem;
+  }
+}
+
 @media (min-width: 640px) {
   .page {
     padding: 1rem;
@@ -358,22 +636,24 @@
     font-size: 1.125rem;
   }
 
-  .leader-content {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
+  .podium-text strong {
+    font-size: 1rem;
   }
 
-  .leader-points {
-    text-align: right;
-  }
-
-  .leader-content h2 {
+  .podium-total {
     font-size: 1.375rem;
   }
 
-  .leader-total {
-    font-size: 2rem;
+  .podium-trophy.rank-1 {
+    font-size: 1.75rem;
+  }
+
+  .podium-trophy.rank-2 {
+    font-size: 1.35rem;
+  }
+
+  .podium-trophy.rank-3 {
+    font-size: 1.05rem;
   }
 
   .team-name,
