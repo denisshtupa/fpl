@@ -242,10 +242,12 @@ export class TeamBattleComponent {
 
   private buildTeams(): TeamBattleSummary[] {
     const standingsByEntry = new Map(this.standings().map((entry) => [entry.entry, entry]));
+    const profilesByEntry = new Map(this.managerProfiles().map((profile) => [profile.entryId, profile]));
 
     return TEAM_BATTLE_TEAMS.map((team) => {
       const players = team.members.map((member) => {
         const standing = standingsByEntry.get(member.entryId);
+        const profile = profilesByEntry.get(member.entryId);
 
         return {
           entryId: member.entryId,
@@ -253,10 +255,10 @@ export class TeamBattleComponent {
           teamId: team.id,
           teamName: team.name,
           teamColor: team.color,
-          entryName: standing?.entry_name ?? member.shortName,
-          playerName: standing?.player_name ?? '—',
-          gwPoints: standing?.event_total ?? 0,
-          totalPoints: standing?.total ?? 0,
+          entryName: profile?.entryName ?? standing?.entry_name ?? member.shortName,
+          playerName: profile?.playerName ?? standing?.player_name ?? '—',
+          gwPoints: profile?.gwPoints ?? standing?.event_total ?? 0,
+          totalPoints: profile?.totalPoints ?? standing?.total ?? 0,
           rank: standing?.rank ?? 0,
         } satisfies TeamBattlePlayer;
       });

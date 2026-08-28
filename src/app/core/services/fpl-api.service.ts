@@ -233,6 +233,34 @@ export class FplApiService {
       (player) => player.status === 'played' || player.status === 'dnp',
     ).length;
 
+    const transferCost = picksResponse.entry_history.event_transfers_cost;
+    const officialGwPoints = picksResponse.entry_history.points;
+    const officialTotalPoints = picksResponse.entry_history.total_points;
+    const liveRawPoints = relevantSquad.reduce((sum, player) => sum + player.scoredPoints, 0);
+    const liveGwPoints = liveRawPoints - transferCost;
+    const liveTotalPoints = officialTotalPoints - officialGwPoints + liveGwPoints;
+    const startingXiPoints = squad
+      .filter((player) => !player.isBench)
+      .reduce((sum, player) => sum + player.scoredPoints, 0);
+    const benchPoints = squad
+      .filter((player) => player.isBench)
+      .reduce((sum, player) => sum + player.basePoints, 0);
+
+    const gwHistory = history.current
+      .slice()
+      .sort((a, b) => a.event - b.event)
+      .map((gw) => ({
+        event: gw.event,
+        points: gw.points,
+        totalPoints: gw.total_points,
+      }));
+
+    if (gwHistory.length) {
+      const current = gwHistory[gwHistory.length - 1];
+      current.points = liveGwPoints;
+      current.totalPoints = liveTotalPoints;
+    }
+
     return {
       entryId,
       shortName: member?.shortName ?? entry.name,
@@ -244,27 +272,20 @@ export class FplApiService {
       playerName: `${entry.player_first_name} ${entry.player_last_name}`.trim(),
       teamValue: picksResponse.entry_history.value,
       bank: picksResponse.entry_history.bank,
-      gwPoints: picksResponse.entry_history.points,
-      totalPoints: picksResponse.entry_history.total_points,
-      benchPoints: picksResponse.entry_history.points_on_bench,
-      transferCost: picksResponse.entry_history.event_transfers_cost,
+      gwPoints: liveGwPoints,
+      totalPoints: liveTotalPoints,
+      benchPoints,
+      transferCost,
       transfers: picksResponse.entry_history.event_transfers,
       activeChip,
       activeChipLabel: activeChip ? FPL_CHIP_LABELS[activeChip] ?? activeChip : null,
       chips,
       chipsUsedCount: chips.filter((chip) => chip.used).length,
       squad,
-      startingXiPoints: squad.filter((player) => !player.isBench).reduce((sum, player) => sum + player.scoredPoints, 0),
+      startingXiPoints,
       playersLeftToPlay,
       playersPlayed,
-      gwHistory: history.current
-        .slice()
-        .sort((a, b) => a.event - b.event)
-        .map((gw) => ({
-          event: gw.event,
-          points: gw.points,
-          totalPoints: gw.total_points,
-        })),
+      gwHistory,
     };
   }
 

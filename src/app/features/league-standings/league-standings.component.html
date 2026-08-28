@@ -103,7 +103,6 @@
                 sortField="rank"
                 [sortOrder]="1"
                 styleClass="standings-table p-datatable-sm"
-                [scrollable]="true"
               >
                 <ng-template #header>
                   <tr>
@@ -112,7 +111,7 @@
                       <p-sortIcon field="rank" />
                     </th>
                     <th>Team</th>
-                    <th pSortableColumn="player_name">
+                    <th pSortableColumn="player_name" class="manager-col">
                       Manager
                       <p-sortIcon field="player_name" />
                     </th>
@@ -143,10 +142,13 @@
                         @if (entry.club_badge_src) {
                           <img [src]="entry.club_badge_src" [alt]="entry.entry_name" class="club-badge" />
                         }
-                        <span class="team-name">{{ entry.entry_name }}</span>
+                        <div class="team-cell-text">
+                          <span class="team-name">{{ entry.entry_name }}</span>
+                          <span class="manager-name manager-name-inline">{{ entry.player_name }}</span>
+                        </div>
                       </div>
                     </td>
-                    <td>
+                    <td class="manager-col">
                       <span class="manager-name">{{ entry.player_name }}</span>
                     </td>
                     <td>
