@@ -120,6 +120,7 @@
   z-index: 200;
   font-size: 0.8125rem;
   flex-wrap: wrap;
+  align-items: center;
   max-width: 100%;
   padding: 0.35rem 0.75rem 0.55rem;
   margin: -0.75rem -0.75rem 0.25rem;
@@ -130,6 +131,20 @@
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+:host ::ng-deep .dashboard-tabs .p-tablist-tab-list {
+  width: 100%;
+  align-items: center;
+}
+
+.tablist-brand-icon {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.35rem;
+  display: block;
 }
 
 :host ::ng-deep .dashboard-tabs .p-tabpanels,
