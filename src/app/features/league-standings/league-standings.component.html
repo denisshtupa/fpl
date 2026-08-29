@@ -144,13 +144,13 @@
                           <img [src]="entry.club_badge_src" [alt]="entry.entry_name" class="club-badge" />
                         }
                         <div class="team-cell-text">
-                          <span class="team-name">{{ entry.entry_name }}</span>
-                          <div class="team-subrow">
-                            <span class="manager-name manager-name-inline">{{ entry.player_name }}</span>
+                          <div class="team-name-row">
+                            <span class="team-name">{{ entry.entry_name }}</span>
                             @if (getChipShort(entry.entry); as chip) {
                               <p-tag [value]="chip" severity="warn" styleClass="active-chip-tag" />
                             }
                           </div>
+                          <span class="manager-name manager-name-inline">{{ entry.player_name }}</span>
                         </div>
                       </div>
                     </td>
@@ -181,11 +181,14 @@
               [dismissableMask]="true"
               [draggable]="false"
               [resizable]="false"
-              [style]="{ width: 'min(28rem, 94vw)' }"
+              [style]="{ width: 'min(34rem, 96vw)' }"
               styleClass="standing-detail-dialog"
             >
               @if (selectedStanding(); as selected) {
-                <p class="standing-detail-manager">{{ selected.player_name }}</p>
+                <p class="standing-detail-manager">
+                  {{ selected.player_name }}
+                  <span class="standing-detail-rank">#{{ selected.rank }} · {{ selected.event_total }} GW · {{ selected.total }} tot</span>
+                </p>
 
                 @if (isRowDetailLoading(selected.entry)) {
                   <div class="standing-detail-loading">
@@ -270,6 +273,64 @@
                           />
                         }
                       </div>
+                    </div>
+                  </div>
+
+                  <div class="modal-squad">
+                    <div class="modal-squad-block">
+                      <div class="modal-squad-header">
+                        <span>XI</span>
+                        <strong>{{ detail.startingXiPoints }} pts</strong>
+                      </div>
+                      <ul class="modal-squad-list">
+                        @for (player of detail.squad; track player.elementId) {
+                          @if (!player.isBench) {
+                            <li [class]="'modal-squad-row status-' + player.status">
+                              <span [class]="'modal-role role-' + player.role.toLowerCase()">{{ player.role }}</span>
+                              <div class="modal-player">
+                                <span class="modal-player-name">
+                                  {{ player.name }}
+                                  @if (player.isCaptain) {
+                                    <span class="modal-cap">C</span>
+                                  } @else if (player.isViceCaptain) {
+                                    <span class="modal-cap vc">VC</span>
+                                  }
+                                </span>
+                                <span class="modal-fixture">{{ player.clubShort }} · {{ player.fixtureLabel }}</span>
+                              </div>
+                              <span class="modal-mins">{{ player.minutes }}′</span>
+                              <span class="modal-pts">
+                                {{ player.scoredPoints }}
+                                @if (player.multiplier > 1) {
+                                  <span class="modal-mult">x{{ player.multiplier }}</span>
+                                }
+                              </span>
+                            </li>
+                          }
+                        }
+                      </ul>
+                    </div>
+
+                    <div class="modal-squad-block">
+                      <div class="modal-squad-header">
+                        <span>Bench</span>
+                        <strong>{{ detail.benchPoints }} pts</strong>
+                      </div>
+                      <ul class="modal-squad-list">
+                        @for (player of detail.squad; track player.elementId) {
+                          @if (player.isBench) {
+                            <li [class]="'modal-squad-row bench status-' + player.status">
+                              <span [class]="'modal-role role-' + player.role.toLowerCase()">{{ player.role }}</span>
+                              <div class="modal-player">
+                                <span class="modal-player-name">{{ player.name }}</span>
+                                <span class="modal-fixture">{{ player.clubShort }} · {{ player.fixtureLabel }}</span>
+                              </div>
+                              <span class="modal-mins">{{ player.minutes }}′</span>
+                              <span class="modal-pts">{{ player.scoredPoints }}</span>
+                            </li>
+                          }
+                        }
+                      </ul>
                     </div>
                   </div>
                 }

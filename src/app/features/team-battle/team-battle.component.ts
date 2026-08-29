@@ -56,6 +56,7 @@ export class TeamBattleComponent {
         ...profile,
         gwPoints: standing.event_total,
         totalPoints: standing.total,
+        rank: standing.rank,
         gwHistory,
       };
     });
@@ -246,6 +247,10 @@ export class TeamBattleComponent {
 
   protected formatValue(value: number): string {
     return `£${(value / 10).toFixed(1)}m`;
+  }
+
+  protected getPlayersTotal(profile: ManagerProfile): number {
+    return profile.playersPlayed + profile.playersLeftToPlay;
   }
 
   protected getChipShort(chip: string | null | undefined): string | null {

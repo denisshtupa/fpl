@@ -35,6 +35,9 @@ export interface ManagerSquadPlayer {
   name: string;
   club: string;
   clubShort: string;
+  opponentShort: string | null;
+  isHome: boolean | null;
+  fixtureLabel: string;
   role: string;
   position: number;
   isBench: boolean;
@@ -72,6 +75,7 @@ export interface ManagerProfile {
   lineColor: string;
   entryName: string;
   playerName: string;
+  rank: number;
   teamValue: number;
   bank: number;
   gwPoints: number;

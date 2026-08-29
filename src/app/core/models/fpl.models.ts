@@ -110,6 +110,12 @@ export interface FplFixture {
 
 export type FixtureMatchStatus = 'upcoming' | 'live' | 'finished';
 
+export interface TeamFixtureInfo {
+  status: FixtureMatchStatus;
+  opponentShort: string;
+  isHome: boolean;
+}
+
 export interface FplLeague {
   id: number;
   name: string;

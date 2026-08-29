@@ -395,6 +395,18 @@
   min-width: 0;
 }
 
+.team-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.team-name-row .team-name {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 .team-name,
 .manager-name {
   overflow: hidden;
@@ -403,25 +415,16 @@
   max-width: 100%;
 }
 
-.team-subrow {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  min-width: 0;
-  margin-top: 0.1rem;
-}
-
-.team-subrow .manager-name-inline {
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
 :host ::ng-deep .active-chip-tag {
-  font-size: 0.625rem;
+  font-size: 0.5625rem;
   font-weight: 800;
   letter-spacing: 0.02em;
-  padding: 0.15rem 0.4rem;
+  line-height: 1;
+  padding: 0.1rem 0.3rem;
   flex-shrink: 0;
+  height: 1.05rem;
+  display: inline-flex;
+  align-items: center;
 }
 
 .manager-name-inline {
@@ -429,12 +432,6 @@
   font-size: 0.625rem;
   color: var(--p-text-muted-color);
   font-weight: 400;
-}
-
-@media (min-width: 640px) {
-  .team-subrow {
-    margin-top: 0.25rem;
-  }
 }
 
 .manager-col {
@@ -488,6 +485,15 @@
   margin: 0 0 0.85rem;
   color: var(--p-text-muted-color);
   font-size: 0.8125rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.standing-detail-rank {
+  font-size: 0.6875rem;
+  color: #00ff87;
+  font-weight: 600;
 }
 
 .standing-detail-loading {
@@ -595,6 +601,156 @@
 .standing-chip-empty {
   color: var(--p-text-muted-color);
   font-size: 0.75rem;
+}
+
+.modal-squad {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.modal-squad-block {
+  min-width: 0;
+}
+
+.modal-squad-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.3rem;
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--p-text-muted-color);
+}
+
+.modal-squad-header strong {
+  font-size: 0.75rem;
+  color: #00ff87;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.modal-squad-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.modal-squad-row {
+  display: grid;
+  grid-template-columns: 1.6rem minmax(0, 1fr) 1.75rem 1.75rem;
+  gap: 0.35rem;
+  align-items: center;
+  padding: 0.28rem 0.35rem;
+  border-radius: 0.35rem;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.6875rem;
+}
+
+.modal-squad-row.bench {
+  opacity: 0.82;
+}
+
+.modal-squad-row.status-live {
+  background: rgba(56, 189, 248, 0.1);
+}
+
+.modal-squad-row.status-upcoming {
+  opacity: 0.78;
+}
+
+.modal-squad-row.status-dnp {
+  opacity: 0.65;
+}
+
+.modal-role {
+  font-size: 0.5625rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+.modal-role.role-gk {
+  color: #facc15;
+}
+
+.modal-role.role-df {
+  color: #38bdf8;
+}
+
+.modal-role.role-md {
+  color: #4ade80;
+}
+
+.modal-role.role-st {
+  color: #f87171;
+}
+
+.modal-player {
+  min-width: 0;
+}
+
+.modal-player-name {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal-cap {
+  font-size: 0.5rem;
+  font-weight: 800;
+  color: #fbbf24;
+  flex-shrink: 0;
+}
+
+.modal-cap.vc {
+  color: #94a3b8;
+}
+
+.modal-fixture {
+  display: block;
+  font-size: 0.5625rem;
+  color: var(--p-text-muted-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal-mins {
+  color: var(--p-text-muted-color);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.modal-pts {
+  font-weight: 800;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.modal-squad-row.status-live .modal-pts {
+  color: #38bdf8;
+}
+
+.modal-squad-row.status-played .modal-pts {
+  color: #4ade80;
+}
+
+.modal-mult {
+  margin-left: 0.15rem;
+  font-size: 0.5625rem;
+  color: #fbbf24;
 }
 
 :host ::ng-deep .chip-used {

@@ -80,6 +80,7 @@
                   <div class="accordion-header">
                     <div>
                       <strong>
+                        <span class="manager-rank">#{{ profile.rank || '—' }}</span>
                         {{ profile.shortName }}
                         @if (getChipShort(profile.activeChip); as chip) {
                           <p-tag [value]="chip" severity="warn" styleClass="active-chip-tag" />
@@ -97,6 +98,10 @@
                 <p-accordion-content>
                   <div class="profile-stats">
                     <div class="stat-item">
+                      <span class="stat-label">Overall rank</span>
+                      <strong>#{{ profile.rank || '—' }}</strong>
+                    </div>
+                    <div class="stat-item">
                       <span class="stat-label">Team value</span>
                       <strong>{{ formatValue(profile.teamValue) }}</strong>
                     </div>
@@ -107,6 +112,10 @@
                     <div class="stat-item">
                       <span class="stat-label">GW points</span>
                       <strong>{{ profile.gwPoints }}</strong>
+                    </div>
+                    <div class="stat-item">
+                      <span class="stat-label">Players</span>
+                      <strong>{{ profile.playersPlayed }}/{{ getPlayersTotal(profile) }}</strong>
                     </div>
                     <div class="stat-item">
                       <span class="stat-label">Bench points</span>
@@ -184,7 +193,7 @@
                                     } @else if (player.isViceCaptain) {
                                       <p-tag value="VC" severity="secondary" styleClass="role-tag" />
                                     }
-                                    <span class="squad-meta">{{ player.clubShort }}</span>
+                                    <span class="squad-meta">{{ player.clubShort }} · {{ player.fixtureLabel }}</span>
                                   </div>
                                 </div>
                                 <div class="squad-card-score">
@@ -216,7 +225,7 @@
                                   <span [class]="'role-badge role-' + player.role.toLowerCase()">{{ player.role }}</span>
                                   <div class="player-name-cell">
                                     <span [class]="'player-name status-' + player.status">{{ player.name }}</span>
-                                    <span class="squad-meta">{{ player.clubShort }}</span>
+                                    <span class="squad-meta">{{ player.clubShort }} · {{ player.fixtureLabel }}</span>
                                   </div>
                                 </div>
                                 <div class="squad-card-score">

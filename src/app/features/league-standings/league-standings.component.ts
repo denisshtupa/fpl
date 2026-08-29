@@ -127,7 +127,7 @@ export class LeagueStandingsComponent {
   openStandingDetail(entry: FplStandingEntry): void {
     this.selectedEntryId.set(entry.entry);
     this.detailVisible.set(true);
-    this.loadRowDetail(entry.entry);
+    this.loadRowDetail(entry.entry, true);
   }
 
   closeDetailModal(): void {
@@ -221,8 +221,12 @@ export class LeagueStandingsComponent {
     });
   }
 
-  private loadRowDetail(entryId: number): void {
-    if (this.rowDetails()[entryId] || this.rowDetailLoading()[entryId]) {
+  private loadRowDetail(entryId: number, force = false): void {
+    if (!force && (this.rowDetails()[entryId] || this.rowDetailLoading()[entryId])) {
+      return;
+    }
+
+    if (this.rowDetailLoading()[entryId]) {
       return;
     }
 
@@ -244,7 +248,17 @@ export class LeagueStandingsComponent {
 
     this.fplApi.getManagerProfile(entryId, eventId).subscribe({
       next: (profile) => {
-        this.rowDetails.update((details) => ({ ...details, [entryId]: profile }));
+        const standing = this.standings().find((entry) => entry.entry === entryId);
+        const liveProfile = standing
+          ? {
+              ...profile,
+              rank: standing.rank,
+              gwPoints: standing.event_total,
+              totalPoints: standing.total,
+            }
+          : profile;
+
+        this.rowDetails.update((details) => ({ ...details, [entryId]: liveProfile }));
         this.rowDetailLoading.update((loading) => ({ ...loading, [entryId]: false }));
         this.playersLeftByEntry.update((map) => ({
           ...map,

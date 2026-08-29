@@ -22,6 +22,7 @@ import {
   FplLeagueStandingsResponse,
   FplStandingEntry,
   FplTransfer,
+  TeamFixtureInfo,
 } from '../models/fpl.models';
 import {
   ManagerChipInfo,
@@ -132,7 +133,7 @@ export class FplApiService {
       map(({ bootstrap, live, fixtures, entries, histories, picks, transfers }) => {
         const lookup = this.buildBootstrapLookup(bootstrap);
         const livePoints = new Map(live.elements.map((element) => [element.id, element.stats]));
-        const fixtureByTeam = this.buildFixtureLookup(fixtures);
+        const fixtureByTeam = this.buildFixtureLookup(fixtures, lookup.teams);
 
         return entryIds.map((entryId, index) =>
           this.buildManagerProfile(
@@ -177,7 +178,7 @@ export class FplApiService {
       map(({ bootstrap, live, fixtures, picks }) => {
         const lookup = this.buildBootstrapLookup(bootstrap);
         const livePoints = new Map(live.elements.map((element) => [element.id, element.stats]));
-        const fixtureByTeam = this.buildFixtureLookup(fixtures);
+        const fixtureByTeam = this.buildFixtureLookup(fixtures, lookup.teams);
         const extras: Record<number, { activeChip: string | null; playersLeft: number }> = {};
 
         entryIds.forEach((entryId, index) => {
@@ -191,11 +192,7 @@ export class FplApiService {
           const squad = picksResponse.picks.map((pick) =>
             this.buildSquadPlayer(pick, lookup, livePoints, fixtureByTeam, activeChip),
           );
-          const relevantSquad =
-            activeChip === 'bboost' ? squad : squad.filter((player) => !player.isBench);
-          const playersLeft = relevantSquad.filter(
-            (player) => player.status === 'upcoming' || player.status === 'live',
-          ).length;
+          const playersLeft = this.countPlayersLeftToPlay(squad, activeChip);
 
           extras[entryId] = { activeChip, playersLeft };
         });
@@ -252,13 +249,27 @@ export class FplApiService {
     }
   }
 
-  private buildFixtureLookup(fixtures: FplFixture[]): Map<number, FixtureMatchStatus> {
-    const fixtureByTeam = new Map<number, FixtureMatchStatus>();
+  private buildFixtureLookup(
+    fixtures: FplFixture[],
+    teams: Map<number, { short_name: string }>,
+  ): Map<number, TeamFixtureInfo> {
+    const fixtureByTeam = new Map<number, TeamFixtureInfo>();
 
     for (const fixture of fixtures) {
       const status = this.resolveMatchStatus(fixture);
-      fixtureByTeam.set(fixture.team_h, status);
-      fixtureByTeam.set(fixture.team_a, status);
+      const homeShort = teams.get(fixture.team_h)?.short_name ?? '???';
+      const awayShort = teams.get(fixture.team_a)?.short_name ?? '???';
+
+      fixtureByTeam.set(fixture.team_h, {
+        status,
+        opponentShort: awayShort,
+        isHome: true,
+      });
+      fixtureByTeam.set(fixture.team_a, {
+        status,
+        opponentShort: homeShort,
+        isHome: false,
+      });
     }
 
     return fixtureByTeam;
@@ -292,6 +303,15 @@ export class FplApiService {
     return 'upcoming';
   }
 
+  /** Captain/TC still to play count by multiplier (Yet = 12 at GW start, not 11). */
+  private countPlayersLeftToPlay(squad: ManagerSquadPlayer[], activeChip: string | null): number {
+    const relevantSquad = activeChip === 'bboost' ? squad : squad.filter((player) => !player.isBench);
+
+    return relevantSquad
+      .filter((player) => player.status === 'upcoming' || player.status === 'live')
+      .reduce((sum, player) => sum + Math.max(1, player.multiplier), 0);
+  }
+
   private statusLabel(status: SquadPlayerStatus): string {
     switch (status) {
       case 'played':
@@ -314,7 +334,7 @@ export class FplApiService {
     eventId: number,
     lookup: BootstrapLookup,
     livePoints: Map<number, FplEventLiveResponse['elements'][number]['stats']>,
-    fixtureByTeam: Map<number, FixtureMatchStatus>,
+    fixtureByTeam: Map<number, TeamFixtureInfo>,
   ): ManagerProfile {
     const member = TEAM_BATTLE_TEAMS.flatMap((team) =>
       team.members.map((player) => ({ ...player, team })),
@@ -329,12 +349,10 @@ export class FplApiService {
 
     const chips = this.buildChipInfo(history.chips);
     const relevantSquad = activeChip === 'bboost' ? squad : squad.filter((player) => !player.isBench);
-    const playersLeftToPlay = relevantSquad.filter(
-      (player) => player.status === 'upcoming' || player.status === 'live',
-    ).length;
-    const playersPlayed = relevantSquad.filter(
-      (player) => player.status === 'played' || player.status === 'dnp',
-    ).length;
+    const playersLeftToPlay = this.countPlayersLeftToPlay(squad, activeChip);
+    const playersPlayed = relevantSquad
+      .filter((player) => player.status === 'played' || player.status === 'dnp')
+      .reduce((sum, player) => sum + Math.max(1, player.multiplier), 0);
 
     const transferCost = picksResponse.entry_history.event_transfers_cost;
     const liveRawPoints = relevantSquad.reduce((sum, player) => sum + player.scoredPoints, 0);
@@ -380,6 +398,7 @@ export class FplApiService {
       lineColor: member?.lineColor ?? team?.color ?? '#94a3b8',
       entryName: entry.name,
       playerName: `${entry.player_first_name} ${entry.player_last_name}`.trim(),
+      rank: 0,
       teamValue: picksResponse.entry_history.value,
       bank: picksResponse.entry_history.bank,
       gwPoints: liveGwPoints,
@@ -455,7 +474,7 @@ export class FplApiService {
     pick: FplEntryPicksResponse['picks'][number],
     lookup: BootstrapLookup,
     livePoints: Map<number, FplEventLiveResponse['elements'][number]['stats']>,
-    fixtureByTeam: Map<number, FixtureMatchStatus>,
+    fixtureByTeam: Map<number, TeamFixtureInfo>,
     activeChip: string | null,
   ): ManagerSquadPlayer {
     const element = lookup.elements.get(pick.element);
@@ -467,14 +486,22 @@ export class FplApiService {
     const isBench = pick.position > 11;
     const countsTowardTotal = !isBench || activeChip === 'bboost';
     const scoredPoints = countsTowardTotal ? basePoints * pick.multiplier : basePoints;
-    const matchStatus = element ? (fixtureByTeam.get(element.team) ?? 'upcoming') : 'upcoming';
+    const fixture = element ? fixtureByTeam.get(element.team) : undefined;
+    const matchStatus = fixture?.status ?? 'upcoming';
     const status = this.resolveSquadPlayerStatus(minutes, matchStatus);
+    const opponentShort = fixture?.opponentShort ?? null;
+    const isHome = fixture?.isHome ?? null;
+    const fixtureLabel =
+      opponentShort && isHome !== null ? `vs ${opponentShort} (${isHome ? 'H' : 'A'})` : '—';
 
     return {
       elementId: pick.element,
       name: element?.web_name ?? `Player ${pick.element}`,
       club: club?.name ?? '—',
       clubShort: club?.short_name ?? '—',
+      opponentShort,
+      isHome,
+      fixtureLabel,
       role: lookup.elementTypes.get(element?.element_type ?? 0) ?? '—',
       position: pick.position,
       isBench,
