@@ -85,11 +85,18 @@
                         @if (getChipShort(profile.activeChip); as chip) {
                           <p-tag [value]="chip" severity="warn" styleClass="active-chip-tag" />
                         }
+                        @if (profile.playersLive > 0) {
+                          <span class="live-players-tag" aria-label="{{ profile.playersLive }} players live">
+                            <span class="live-dot" aria-hidden="true"></span>
+                            Live {{ profile.playersLive }}
+                          </span>
+                        }
                       </strong>
                       <span class="accordion-subtitle">{{ profile.entryName }}</span>
                     </div>
                     <div class="accordion-meta">
                       <span class="gw-points-badge">{{ profile.gwPoints }} GW pts</span>
+                      <span class="total-points-badge">{{ profile.totalPoints }} pts</span>
                       <span>{{ formatValue(profile.teamValue) }}</span>
                     </div>
                   </div>
@@ -114,8 +121,16 @@
                       <strong>{{ profile.gwPoints }}</strong>
                     </div>
                     <div class="stat-item">
+                      <span class="stat-label">Total points</span>
+                      <strong>{{ profile.totalPoints }}</strong>
+                    </div>
+                    <div class="stat-item">
                       <span class="stat-label">Players</span>
                       <strong>{{ profile.playersPlayed }}/{{ getPlayersTotal(profile) }}</strong>
+                    </div>
+                    <div class="stat-item">
+                      <span class="stat-label">Live players</span>
+                      <strong>{{ profile.playersLive }}</strong>
                     </div>
                     <div class="stat-item">
                       <span class="stat-label">Bench points</span>

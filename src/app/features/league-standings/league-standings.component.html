@@ -39,7 +39,11 @@
       <p-tabpanels>
         <p-tabpanel value="teams">
           <section class="tab-content">
-            <app-team-battle [standings]="standings()" [currentEvent]="currentEvent()" />
+            <app-team-battle
+              [standings]="standings()"
+              [currentEvent]="currentEvent()"
+              (playersLeftSync)="onPlayersLeftSync($event)"
+            />
           </section>
         </p-tabpanel>
 

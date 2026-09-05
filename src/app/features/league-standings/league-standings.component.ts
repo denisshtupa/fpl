@@ -221,6 +221,11 @@ export class LeagueStandingsComponent {
     });
   }
 
+  /** Prefer Team battle profile counts when available so Yet matches Managers profiles. */
+  onPlayersLeftSync(playersLeft: Record<number, number>): void {
+    this.playersLeftByEntry.update((current) => ({ ...current, ...playersLeft }));
+  }
+
   private loadRowDetail(entryId: number, force = false): void {
     if (!force && (this.rowDetails()[entryId] || this.rowDetailLoading()[entryId])) {
       return;

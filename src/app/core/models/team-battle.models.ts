@@ -93,5 +93,6 @@ export interface ManagerProfile {
   startingXiPoints: number;
   playersLeftToPlay: number;
   playersPlayed: number;
+  playersLive: number;
   gwHistory: ManagerGwPoint[];
 }

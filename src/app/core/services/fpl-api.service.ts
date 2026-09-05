@@ -188,13 +188,11 @@ export class FplApiService {
             return;
           }
 
-          const activeChip = picksResponse.active_chip;
-          const squad = picksResponse.picks.map((pick) =>
-            this.buildSquadPlayer(pick, lookup, livePoints, fixtureByTeam, activeChip),
-          );
-          const playersLeft = this.countPlayersLeftToPlay(squad, activeChip);
-
-          extras[entryId] = { activeChip, playersLeft };
+          const progress = this.computeSquadProgress(picksResponse, lookup, livePoints, fixtureByTeam);
+          extras[entryId] = {
+            activeChip: progress.activeChip,
+            playersLeft: progress.playersLeftToPlay,
+          };
         });
 
         return extras;
@@ -254,22 +252,36 @@ export class FplApiService {
     teams: Map<number, { short_name: string }>,
   ): Map<number, TeamFixtureInfo> {
     const fixtureByTeam = new Map<number, TeamFixtureInfo>();
+    const statusPriority: Record<FixtureMatchStatus, number> = {
+      finished: 0,
+      upcoming: 1,
+      live: 2,
+    };
 
     for (const fixture of fixtures) {
       const status = this.resolveMatchStatus(fixture);
       const homeShort = teams.get(fixture.team_h)?.short_name ?? '???';
       const awayShort = teams.get(fixture.team_a)?.short_name ?? '???';
-
-      fixtureByTeam.set(fixture.team_h, {
+      const homeInfo: TeamFixtureInfo = {
         status,
         opponentShort: awayShort,
         isHome: true,
-      });
-      fixtureByTeam.set(fixture.team_a, {
+      };
+      const awayInfo: TeamFixtureInfo = {
         status,
         opponentShort: homeShort,
         isHome: false,
-      });
+      };
+
+      const existingHome = fixtureByTeam.get(fixture.team_h);
+      if (!existingHome || statusPriority[status] >= statusPriority[existingHome.status]) {
+        fixtureByTeam.set(fixture.team_h, homeInfo);
+      }
+
+      const existingAway = fixtureByTeam.get(fixture.team_a);
+      if (!existingAway || statusPriority[status] >= statusPriority[existingAway.status]) {
+        fixtureByTeam.set(fixture.team_a, awayInfo);
+      }
     }
 
     return fixtureByTeam;
@@ -303,13 +315,58 @@ export class FplApiService {
     return 'upcoming';
   }
 
-  /** Captain/TC still to play count by multiplier (Yet = 12 at GW start, not 11). */
+  /** Remaining = not finished yet (upcoming + live). Captain/TC by multiplier (12 at GW start). */
   private countPlayersLeftToPlay(squad: ManagerSquadPlayer[], activeChip: string | null): number {
     const relevantSquad = activeChip === 'bboost' ? squad : squad.filter((player) => !player.isBench);
 
     return relevantSquad
       .filter((player) => player.status === 'upcoming' || player.status === 'live')
       .reduce((sum, player) => sum + Math.max(1, player.multiplier), 0);
+  }
+
+  /** Currently live slots, weighted by multiplier (captain = 2, TC = 3). */
+  private countPlayersLive(squad: ManagerSquadPlayer[], activeChip: string | null): number {
+    const relevantSquad = activeChip === 'bboost' ? squad : squad.filter((player) => !player.isBench);
+
+    return relevantSquad
+      .filter((player) => player.status === 'live')
+      .reduce((sum, player) => sum + Math.max(1, player.multiplier), 0);
+  }
+
+  private countPlayersPlayed(squad: ManagerSquadPlayer[], activeChip: string | null): number {
+    const relevantSquad = activeChip === 'bboost' ? squad : squad.filter((player) => !player.isBench);
+
+    return relevantSquad
+      .filter((player) => player.status === 'played' || player.status === 'dnp')
+      .reduce((sum, player) => sum + Math.max(1, player.multiplier), 0);
+  }
+
+  /** Same squad progress used by Team battle profiles and Overall Yet. */
+  private computeSquadProgress(
+    picksResponse: FplEntryPicksResponse,
+    lookup: BootstrapLookup,
+    livePoints: Map<number, FplEventLiveResponse['elements'][number]['stats']>,
+    fixtureByTeam: Map<number, TeamFixtureInfo>,
+  ): {
+    activeChip: string | null;
+    squad: ManagerSquadPlayer[];
+    playersLeftToPlay: number;
+    playersLive: number;
+    playersPlayed: number;
+  } {
+    const activeChip = picksResponse.active_chip;
+    const squad = picksResponse.picks
+      .slice()
+      .sort((a, b) => a.position - b.position)
+      .map((pick) => this.buildSquadPlayer(pick, lookup, livePoints, fixtureByTeam, activeChip));
+
+    return {
+      activeChip,
+      squad,
+      playersLeftToPlay: this.countPlayersLeftToPlay(squad, activeChip),
+      playersLive: this.countPlayersLive(squad, activeChip),
+      playersPlayed: this.countPlayersPlayed(squad, activeChip),
+    };
   }
 
   private statusLabel(status: SquadPlayerStatus): string {
@@ -341,18 +398,16 @@ export class FplApiService {
     ).find((player) => player.entryId === entryId);
 
     const team = member?.team;
-    const activeChip = picksResponse.active_chip;
-    const squad = picksResponse.picks
-      .slice()
-      .sort((a, b) => a.position - b.position)
-      .map((pick) => this.buildSquadPlayer(pick, lookup, livePoints, fixtureByTeam, activeChip));
+    const {
+      activeChip,
+      squad,
+      playersLeftToPlay,
+      playersLive,
+      playersPlayed,
+    } = this.computeSquadProgress(picksResponse, lookup, livePoints, fixtureByTeam);
 
     const chips = this.buildChipInfo(history.chips);
     const relevantSquad = activeChip === 'bboost' ? squad : squad.filter((player) => !player.isBench);
-    const playersLeftToPlay = this.countPlayersLeftToPlay(squad, activeChip);
-    const playersPlayed = relevantSquad
-      .filter((player) => player.status === 'played' || player.status === 'dnp')
-      .reduce((sum, player) => sum + Math.max(1, player.multiplier), 0);
 
     const transferCost = picksResponse.entry_history.event_transfers_cost;
     const liveRawPoints = relevantSquad.reduce((sum, player) => sum + player.scoredPoints, 0);
@@ -416,6 +471,7 @@ export class FplApiService {
       startingXiPoints,
       playersLeftToPlay,
       playersPlayed,
+      playersLive,
       gwHistory,
     };
   }

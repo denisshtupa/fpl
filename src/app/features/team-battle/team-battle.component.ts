@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { AccordionModule } from 'primeng/accordion';
 import { ChartModule } from 'primeng/chart';
 import { CardModule } from 'primeng/card';
@@ -30,6 +30,7 @@ export class TeamBattleComponent {
 
   readonly standings = input.required<FplStandingEntry[]>();
   readonly currentEvent = input<FplEvent | undefined>(undefined);
+  readonly playersLeftSync = output<Record<number, number>>();
 
   protected readonly detailsLoading = signal(false);
   protected readonly detailsError = signal<string | null>(null);
@@ -269,6 +270,13 @@ export class TeamBattleComponent {
       next: (profiles) => {
         this.managerProfiles.set(profiles);
         this.detailsLoading.set(false);
+
+        const playersLeft: Record<number, number> = {};
+        for (const profile of profiles) {
+          playersLeft[profile.entryId] = profile.playersLeftToPlay;
+        }
+        this.playersLeftSync.emit(playersLeft);
+
         if (!this.hasLoadedProfilesOnce) {
           this.hasLoadedProfilesOnce = true;
           // Keep viewport at top after profiles expand the page on refresh.
