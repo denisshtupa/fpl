@@ -47,6 +47,8 @@ export class TeamBattleComponent {
         return profile;
       }
 
+      console.log(standing);
+      console.log(profile.gwHistory);
       const gwHistory = profile.gwHistory.map((gw, index, all) =>
         index === all.length - 1
           ? { ...gw, points: standing.event_total, totalPoints: standing.total }
@@ -80,6 +82,8 @@ export class TeamBattleComponent {
       return null;
     }
 
+    console.log("team 0 total points", teams[0].totalPoints);
+    console.log("team 1 total points", teams[1].totalPoints);
     if (teams[0].totalPoints === teams[1].totalPoints) {
       return null;
     }

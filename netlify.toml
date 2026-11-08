@@ -5,7 +5,9 @@
 [build.environment]
   NODE_VERSION = "22"
 
-# /api/* is handled by netlify/edge-functions/fpl-api-proxy.js
+[[edge_functions]]
+  path = "/api/*"
+  function = "fpl-api-proxy"
 
 [[redirects]]
   from = "/*"

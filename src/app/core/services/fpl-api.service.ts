@@ -1,6 +1,19 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, forkJoin, map, of, shareReplay, catchError } from 'rxjs';
+import {
+  Observable,
+  catchError,
+  forkJoin,
+  from,
+  map,
+  mergeMap,
+  of,
+  retry,
+  shareReplay,
+  switchMap,
+  timer,
+  toArray,
+} from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 
@@ -47,22 +60,20 @@ export class FplApiService {
   getLeagueStandings(leagueId = environment.leagueId, page = 1): Observable<FplLeagueStandingsResponse> {
     const params = new HttpParams().set('page_standings', page);
 
-    return this.http.get<FplLeagueStandingsResponse>(
+    return this.fplGet<FplLeagueStandingsResponse>(
       `${this.baseUrl}/leagues-classic/${leagueId}/standings/`,
-      { params },
+      params,
     );
   }
 
   getH2hStandings(leagueId = environment.h2hLeagueId): Observable<FplH2hStandingsResponse> {
-    return this.http.get<FplH2hStandingsResponse>(`${this.baseUrl}/leagues-h2h/${leagueId}/standings/`);
+    return this.fplGet<FplH2hStandingsResponse>(`${this.baseUrl}/leagues-h2h/${leagueId}/standings/`);
   }
 
   getH2hMatches(eventId: number, leagueId = environment.h2hLeagueId, page = 1): Observable<FplH2hMatchesPage> {
     const params = new HttpParams().set('page', page).set('event', eventId);
 
-    return this.http.get<FplH2hMatchesPage>(`${this.baseUrl}/leagues-h2h-matches/league/${leagueId}/`, {
-      params,
-    });
+    return this.fplGet<FplH2hMatchesPage>(`${this.baseUrl}/leagues-h2h-matches/league/${leagueId}/`, params);
   }
 
   getCurrentEvent(): Observable<FplEvent | undefined> {
@@ -71,9 +82,9 @@ export class FplApiService {
 
   getBootstrapStatic(): Observable<FplBootstrapStatic> {
     if (!this.bootstrapCache$) {
-      this.bootstrapCache$ = this.http
-        .get<FplBootstrapStatic>(`${this.baseUrl}/bootstrap-static/`)
-        .pipe(shareReplay(1));
+      this.bootstrapCache$ = this.fplGet<FplBootstrapStatic>(`${this.baseUrl}/bootstrap-static/`).pipe(
+        shareReplay(1),
+      );
     }
 
     return this.bootstrapCache$;
@@ -85,31 +96,49 @@ export class FplApiService {
   }
 
   getEntry(entryId: number): Observable<FplEntry> {
-    return this.http.get<FplEntry>(`${this.baseUrl}/entry/${entryId}/`);
+    return this.fplGet<FplEntry>(`${this.baseUrl}/entry/${entryId}/`);
   }
 
   getEntryHistory(entryId: number): Observable<FplEntryHistoryResponse> {
-    return this.http.get<FplEntryHistoryResponse>(`${this.baseUrl}/entry/${entryId}/history/`);
+    return this.fplGet<FplEntryHistoryResponse>(`${this.baseUrl}/entry/${entryId}/history/`);
   }
 
   getEntryPicks(entryId: number, eventId: number): Observable<FplEntryPicksResponse> {
-    return this.http.get<FplEntryPicksResponse>(`${this.baseUrl}/entry/${entryId}/event/${eventId}/picks/`);
+    return this.fplGet<FplEntryPicksResponse>(`${this.baseUrl}/entry/${entryId}/event/${eventId}/picks/`);
   }
 
   getEntryTransfers(entryId: number): Observable<FplTransfer[]> {
-    return this.http.get<FplTransfer[]>(`${this.baseUrl}/entry/${entryId}/transfers/`).pipe(
+    return this.fplGet<FplTransfer[]>(`${this.baseUrl}/entry/${entryId}/transfers/`).pipe(
       catchError(() => of([])),
     );
   }
 
   getEventLive(eventId: number): Observable<FplEventLiveResponse> {
-    return this.http.get<FplEventLiveResponse>(`${this.baseUrl}/event/${eventId}/live/`);
+    return this.fplGet<FplEventLiveResponse>(`${this.baseUrl}/event/${eventId}/live/`);
   }
 
   getFixtures(eventId: number): Observable<FplFixture[]> {
     const params = new HttpParams().set('event', eventId);
 
-    return this.http.get<FplFixture[]>(`${this.baseUrl}/fixtures/`, { params });
+    return this.fplGet<FplFixture[]>(`${this.baseUrl}/fixtures/`, params);
+  }
+
+  /** Retry flaky FPL/proxy 403/429/5xx so one blocked entry does not fail the whole page. */
+  private fplGet<T>(url: string, params?: HttpParams): Observable<T> {
+    return this.http.get<T>(url, params ? { params } : undefined).pipe(
+      retry({
+        count: 3,
+        delay: (error, retryCount) => {
+          const status = error?.status as number | undefined;
+          const retryable = !status || status === 0 || status === 403 || status === 429 || status >= 500;
+          if (!retryable) {
+            throw error;
+          }
+
+          return timer(300 * retryCount * retryCount);
+        },
+      }),
+    );
   }
 
   getManagerProfiles(eventId: number): Observable<ManagerProfile[]> {
@@ -125,28 +154,43 @@ export class FplApiService {
       bootstrap: this.getBootstrapStatic(),
       live: this.getEventLive(eventId),
       fixtures: this.getFixtures(eventId),
-      entries: forkJoin(entryIds.map((entryId) => this.getEntry(entryId))),
-      histories: forkJoin(entryIds.map((entryId) => this.getEntryHistory(entryId))),
-      picks: forkJoin(entryIds.map((entryId) => this.getEntryPicks(entryId, eventId))),
-      transfers: forkJoin(entryIds.map((entryId) => this.getEntryTransfers(entryId))),
     }).pipe(
-      map(({ bootstrap, live, fixtures, entries, histories, picks, transfers }) => {
+      switchMap(({ bootstrap, live, fixtures }) => {
         const lookup = this.buildBootstrapLookup(bootstrap);
         const livePoints = new Map(live.elements.map((element) => [element.id, element.stats]));
         const fixtureByTeam = this.buildFixtureLookup(fixtures, lookup.teams);
 
-        return entryIds.map((entryId, index) =>
-          this.buildManagerProfile(
-            entryId,
-            entries[index],
-            histories[index],
-            picks[index],
-            transfers[index],
-            eventId,
-            lookup,
-            livePoints,
-            fixtureByTeam,
+        return from(entryIds).pipe(
+          mergeMap(
+            (entryId) =>
+              forkJoin({
+                entryId: of(entryId),
+                entry: this.getEntry(entryId),
+                history: this.getEntryHistory(entryId),
+                picks: this.getEntryPicks(entryId, eventId),
+                transfers: this.getEntryTransfers(entryId),
+              }),
+            2,
           ),
+          toArray(),
+          map((rows) => {
+            const byId = new Map(rows.map((row) => [row.entryId, row]));
+
+            return entryIds.map((entryId) => {
+              const row = byId.get(entryId)!;
+              return this.buildManagerProfile(
+                entryId,
+                row.entry,
+                row.history,
+                row.picks,
+                row.transfers,
+                eventId,
+                lookup,
+                livePoints,
+                fixtureByTeam,
+              );
+            });
+          }),
         );
       }),
     );
@@ -169,33 +213,41 @@ export class FplApiService {
       bootstrap: this.getBootstrapStatic(),
       live: this.getEventLive(eventId),
       fixtures: this.getFixtures(eventId),
-      picks: forkJoin(
-        entryIds.map((entryId) =>
-          this.getEntryPicks(entryId, eventId).pipe(catchError(() => of(null))),
-        ),
-      ),
     }).pipe(
-      map(({ bootstrap, live, fixtures, picks }) => {
+      switchMap(({ bootstrap, live, fixtures }) => {
         const lookup = this.buildBootstrapLookup(bootstrap);
         const livePoints = new Map(live.elements.map((element) => [element.id, element.stats]));
         const fixtureByTeam = this.buildFixtureLookup(fixtures, lookup.teams);
-        const extras: Record<number, { activeChip: string | null; playersLeft: number }> = {};
 
-        entryIds.forEach((entryId, index) => {
-          const picksResponse = picks[index];
-          if (!picksResponse) {
-            extras[entryId] = { activeChip: null, playersLeft: 0 };
-            return;
-          }
+        return from(entryIds).pipe(
+          mergeMap(
+            (entryId) =>
+              this.getEntryPicks(entryId, eventId).pipe(
+                map((picks) => ({ entryId, picks })),
+                catchError(() => of({ entryId, picks: null as FplEntryPicksResponse | null })),
+              ),
+            3,
+          ),
+          toArray(),
+          map((rows) => {
+            const extras: Record<number, { activeChip: string | null; playersLeft: number }> = {};
 
-          const progress = this.computeSquadProgress(picksResponse, lookup, livePoints, fixtureByTeam);
-          extras[entryId] = {
-            activeChip: progress.activeChip,
-            playersLeft: progress.playersLeftToPlay,
-          };
-        });
+            for (const { entryId, picks } of rows) {
+              if (!picks) {
+                extras[entryId] = { activeChip: null, playersLeft: 0 };
+                continue;
+              }
 
-        return extras;
+              const progress = this.computeSquadProgress(picks, lookup, livePoints, fixtureByTeam);
+              extras[entryId] = {
+                activeChip: progress.activeChip,
+                playersLeft: progress.playersLeftToPlay,
+              };
+            }
+
+            return extras;
+          }),
+        );
       }),
     );
   }
